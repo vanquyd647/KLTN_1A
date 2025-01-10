@@ -6,7 +6,7 @@ const redisClient = require('../configs/redisClient');  // Import Redis client
 const rateLimiter = require('../middlewares/rateLimiter');  // Import rate limiting middleware
 
 // Apply rate limiting to specific routes (for example, register and login)
-router.use('/register', rateLimiter); 
+router.use('/register', rateLimiter);
 router.use('/login', rateLimiter);
 router.use('/verify-otp', rateLimiter);
 router.use('/profile', rateLimiter);
@@ -29,15 +29,24 @@ router.get('/profile', authMiddleware, async (req, res) => {
     const userId = req.userId;
 
     try {
+        // Kiểm tra dữ liệu người dùng đã lưu trong cache
         const cachedProfile = await redisClient.get(`user:${userId}:profile`);
 
+        // Nếu tìm thấy dữ liệu trong cache, trả về dữ liệu
         if (cachedProfile) {
-            return res.json(JSON.parse(cachedProfile));
+            const parsedProfile = JSON.parse(cachedProfile);
+            return res.status(200).json({
+                status: 'success',
+                code: 200,
+                message: 'Lấy thông tin người dùng thành công!',
+                data: parsedProfile,  // Trả về dữ liệu đã được parse trong trường "data"
+            });
         }
 
-        // If not cached, fetch from database
+        // Nếu không có dữ liệu trong cache, lấy dữ liệu từ cơ sở dữ liệu
         const user = await UserController.getUser(req, res);
 
+        // Kiểm tra nếu người dùng không tồn tại
         if (!user) {
             return res.status(404).json({
                 status: 'error',
@@ -47,9 +56,10 @@ router.get('/profile', authMiddleware, async (req, res) => {
             });
         }
 
-        // Save user data to cache
+        // Lưu thông tin người dùng vào cache với thời gian hết hạn là 3600 giây (1 giờ)
         await redisClient.set(`user:${userId}:profile`, JSON.stringify(user), 'EX', 3600);
 
+        // Trả về dữ liệu người dùng
         return res.status(200).json({
             status: 'success',
             code: 200,
@@ -67,6 +77,7 @@ router.get('/profile', authMiddleware, async (req, res) => {
         });
     }
 });
+
 
 
 
