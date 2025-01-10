@@ -1,5 +1,8 @@
 require('dotenv').config(); // Load environment variables from .env file
 
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpec = require('./configs/swagger');
+
 const express = require('express');
 const morgan = require('morgan');
 const helmet = require('helmet');
@@ -16,6 +19,8 @@ const corsOptions = {
     methods: 'GET, POST, PUT, DELETE',
     allowedHeaders: 'Content-Type, Authorization',
 };
+
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Init middleware
 app.use(rateLimiter); // Use rate-limiting middleware for anti-DDoS protection
