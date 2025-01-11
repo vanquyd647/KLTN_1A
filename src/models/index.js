@@ -15,10 +15,10 @@ const defineUserRole = require('./UserRole');
 const defineCategory = require('./Category');
 const defineProductCategory = require('./ProductCategory');
 const defineToken = require('./Token');
-const defineSession = require('./Session'); 
+const defineSession = require('./Session');
 const defineCart = require('./Cart');
 const defineCartItem = require('./CartItem');
-const defineOrder = require('./Order'); 
+const defineOrder = require('./Order');
 const defineOrderItem = require('./OrderItem');
 const definePayment = require('./Payment');
 const defineReview = require('./Review');
@@ -45,7 +45,7 @@ const models = {
     OrderItem: defineOrderItem(sequelize),
     Payment: definePayment(sequelize),
     Review: defineReview(sequelize),
-    
+
 };
 
 const {
@@ -73,16 +73,15 @@ const {
 
 // Các quan hệ giữa các mô hình
 Product.hasMany(ProductStock, { foreignKey: 'product_id' });
-Product.belongsToMany(Size, { through: ProductSize, foreignKey: 'product_id', otherKey: 'size_id' });
-Product.belongsToMany(Color, { through: ProductColor, foreignKey: 'product_id', otherKey: 'color_id' });
+Product.belongsToMany(Size, { through: ProductSize, foreignKey: 'product_id', otherKey: 'size_id', as: 'productSizes' });
+Product.belongsToMany(Color, { through: ProductColor, foreignKey: 'product_id', otherKey: 'color_id', as: 'productColors' });
 
 // Quan hệ giữa Color và các mô hình khác
-Color.belongsToMany(Product, { through: ProductColor, foreignKey: 'color_id', otherKey: 'product_id' });
+Color.belongsToMany(Product, { through: ProductColor, foreignKey: 'color_id', otherKey: 'product_id', as: 'products' });
 Color.hasMany(ProductStock, { foreignKey: 'color_id' });
 
-
 // Quan hệ giữa Size và các mô hình khác
-Size.belongsToMany(Product, { through: ProductSize, foreignKey: 'size_id', otherKey: 'product_id' });
+Size.belongsToMany(Product, { through: ProductSize, foreignKey: 'size_id', otherKey: 'product_id', as: 'products' });
 Size.hasMany(ProductStock, { foreignKey: 'size_id' });
 
 // Quan hệ giữa ProductStock và các mô hình khác
@@ -90,13 +89,13 @@ ProductStock.belongsTo(Product, { foreignKey: 'product_id' });
 ProductStock.belongsTo(Color, { foreignKey: 'color_id' });
 ProductStock.belongsTo(Size, { foreignKey: 'size_id' });
 
+// Product and Category relationships
+Product.belongsToMany(Category, { through: ProductCategory, foreignKey: 'product_id', otherKey: 'category_id', as: 'categories', });
+Category.belongsToMany(Product, { through: ProductCategory, foreignKey: 'category_id', otherKey: 'product_id', as: 'products', });
+
 // Quan hệ giữa User và Role
 User.belongsToMany(Role, { through: UserRole, foreignKey: 'user_id', otherKey: 'role_id' });
 Role.belongsToMany(User, { through: UserRole, foreignKey: 'role_id', otherKey: 'user_id' });
-
-// Product and Category relationships
-Product.belongsToMany(Category, {through: ProductCategory, foreignKey: 'product_id', otherKey: 'category_id', as: 'categories', });
-Category.belongsToMany(Product, {through: ProductCategory, foreignKey: 'category_id', otherKey: 'product_id',as: 'products', });
 
 // Quan hệ giữa Token và User
 Token.belongsTo(User, { foreignKey: 'user_id' });
@@ -107,24 +106,24 @@ Session.belongsTo(User, { foreignKey: 'user_id' });
 User.hasMany(Session, { foreignKey: 'user_id' });
 
 // Mối quan hệ giữa Cart và User
-Cart.belongsTo(User, { foreignKey: 'user_id' });  
-User.hasMany(Cart, { foreignKey: 'user_id' });  
+Cart.belongsTo(User, { foreignKey: 'user_id' });
+User.hasMany(Cart, { foreignKey: 'user_id' });
 
 // Mối quan hệ giữa Cart và CartItem
-User.hasOne(Cart, { foreignKey: 'user_id' }); 
-Cart.belongsTo(User, { foreignKey: 'user_id' }); 
+User.hasOne(Cart, { foreignKey: 'user_id' });
+Cart.belongsTo(User, { foreignKey: 'user_id' });
 
-Cart.hasMany(CartItem, { foreignKey: 'cart_id' }); 
-CartItem.belongsTo(Cart, { foreignKey: 'cart_id' }); 
+Cart.hasMany(CartItem, { foreignKey: 'cart_id' });
+CartItem.belongsTo(Cart, { foreignKey: 'cart_id' });
 
-Product.hasMany(CartItem, { foreignKey: 'product_id' }); 
-CartItem.belongsTo(Product, { foreignKey: 'product_id' }); 
+Product.hasMany(CartItem, { foreignKey: 'product_id' });
+CartItem.belongsTo(Product, { foreignKey: 'product_id' });
 
-Size.hasMany(CartItem, { foreignKey: 'size_id' }); 
-CartItem.belongsTo(Size, { foreignKey: 'size_id' }); 
+Size.hasMany(CartItem, { foreignKey: 'size_id' });
+CartItem.belongsTo(Size, { foreignKey: 'size_id' });
 
-Color.hasMany(CartItem, { foreignKey: 'color_id' }); 
-CartItem.belongsTo(Color, { foreignKey: 'color_id' }); 
+Color.hasMany(CartItem, { foreignKey: 'color_id' });
+CartItem.belongsTo(Color, { foreignKey: 'color_id' });
 
 // Mối quan hệ giữa Order và User
 User.hasMany(Order, { foreignKey: 'user_id' });

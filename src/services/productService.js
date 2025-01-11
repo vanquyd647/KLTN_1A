@@ -92,36 +92,25 @@ const createProduct = async (productData) => {
     }
 };
 
-// 2. Hàm lấy danh sách sản phẩm
-const getProducts = async (filters = {}) => {
+// Hàm lấy tất cả sản phẩm
+const getProducts = async () => {
     try {
-        const products = await Product.findAll({
+        return await Product.findAll({
             where: {
-                status: filters.status || { [Op.ne]: 'discontinued' }, // Lọc theo trạng thái sản phẩm
+                status: { [Op.ne]: 'discontinued' },
             },
             include: [
-                {
-                    model: Category,
-                    as: 'categories',
-                    attributes: ['name'],
-                    through: { attributes: [] }
-                },
-                {
-                    model: ProductColor,
-                    include: [{ model: Color, attributes: ['color'] }],
-                },
-                {
-                    model: ProductSize,
-                    include: [{ model: Size, attributes: ['size'] }],
-                }
+                { model: Category, as: 'categories', attributes: ['name'], through: { attributes: [] } },
+                { model: Color, attributes: ['color', 'hex_code'], through: { model: ProductColor, attributes: [] } },
+                { model: Size, as: 'Sizes', through: { model: ProductSize, attributes: [] }, attributes: ['size'] }
             ],
         });
-
-        return products;
     } catch (error) {
-        throw error;
+        console.error('Error details:', error);
+        throw new Error('Failed to fetch products');
     }
 };
+
 
 // 3. Hàm lấy chi tiết sản phẩm
 const getProductDetail = async (slug) => {
@@ -129,23 +118,28 @@ const getProductDetail = async (slug) => {
         const product = await Product.findOne({
             where: { slug },
             include: [
-                {
-                    model: Category,
-                    as: 'categories',
+                { 
+                    model: Category, 
+                    as: 'categories', 
                     attributes: ['name'],
                     through: { attributes: [] }
                 },
-                {
-                    model: ProductColor,
-                    include: [{ model: Color, attributes: ['color', 'hex_code'] }],
+                { 
+                    model: Color,  // Liên kết tới Color
+                    as: 'productColors', // Alias đúng đã được định nghĩa
+                    attributes: ['color', 'hex_code'],
                 },
-                {
-                    model: ProductSize,
-                    include: [{ model: Size, attributes: ['size'] }],
+                { 
+                    model: Size, 
+                    as: 'productSizes', // Alias đúng đã được định nghĩa
+                    attributes: ['size']
                 },
-                {
-                    model: ProductStock,
-                    include: [{ model: Size, attributes: ['size'] }, { model: Color, attributes: ['color'] }],
+                { 
+                    model: ProductStock, 
+                    include: [
+                        { model: Size, attributes: ['size'] },
+                        { model: Color, attributes: ['color'] }
+                    ]
                 }
             ],
         });
