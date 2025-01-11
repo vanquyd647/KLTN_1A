@@ -2,6 +2,7 @@ const UserService = require('../services/userService');
 const TokenService = require('../services/tokenService');
 const OtpService = require('../services/otpService');
 const EmailService = require('../services/emailService');
+const redisClient = require('../configs/redisClient'); 
 
 const userStore = new Map();
 
@@ -191,9 +192,25 @@ class UserController {
     }
 
     // Lấy thông tin người dùng
-    static async getUser(req, res) {
+    static async getUserProfile(req, res) {
+        const userId = req.userId;
+
         try {
-            const userId = req.userId;
+            // Kiểm tra dữ liệu người dùng trong Redis cache
+            const cachedProfile = await redisClient.get(`user:${userId}:profile`);
+
+            if (cachedProfile) {
+                // Dữ liệu tồn tại trong cache
+                const parsedProfile = JSON.parse(cachedProfile);
+                return res.status(200).json({
+                    status: 'success',
+                    code: 200,
+                    message: 'Lấy thông tin người dùng từ cache thành công!',
+                    data: parsedProfile, // Dữ liệu đã parse
+                });
+            }
+
+            // Nếu không có trong cache, lấy từ database
             const user = await UserService.getUserById(userId);
 
             if (!user) {
@@ -201,11 +218,11 @@ class UserController {
                     status: 'error',
                     code: 404,
                     message: 'Người dùng không tồn tại!',
-                    data: null
+                    data: null,
                 });
             }
 
-            // Structure the response to exclude sensitive data like password
+            // Tạo dữ liệu người dùng (loại bỏ các thông tin nhạy cảm)
             const userProfile = {
                 id: user.id,
                 firstname: user.firstname,
@@ -213,14 +230,27 @@ class UserController {
                 email: user.email,
                 phone: user.phone,
                 gender: user.gender,
-                created_at: user.created_at, // Include this if needed
-                updated_at: user.updated_at, // Include this if needed
+                created_at: user.created_at,
+                updated_at: user.updated_at,
             };
 
-            return userProfile;
+            // Lưu thông tin vào Redis cache với thời gian hết hạn 3600 giây (1 giờ)
+            await redisClient.set(`user:${userId}:profile`, JSON.stringify(userProfile), 'EX', 3600);
+
+            return res.status(200).json({
+                status: 'success',
+                code: 200,
+                message: 'Lấy thông tin người dùng thành công!',
+                data: userProfile,
+            });
         } catch (error) {
-            console.error('Error fetching user:', error);
-            throw error;
+            console.error('Error retrieving user profile:', error);
+            return res.status(500).json({
+                status: 'error',
+                code: 500,
+                message: 'Lỗi hệ thống, vui lòng thử lại sau!',
+                data: null,
+            });
         }
     }
 

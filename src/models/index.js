@@ -5,7 +5,7 @@ const defineProduct = require('./Product');
 const defineColor = require('./Color');
 const defineSize = require('./Size');
 const defineProductStock = require('./ProductStock');
-const defineProductImage = require('./ProductImage');
+// const defineProductImage = require('./ProductImage');
 const defineProductSize = require('./ProductSize');
 const defineProductColor = require('./ProductColor');
 const defineAddress = require('./Address');
@@ -28,7 +28,7 @@ const models = {
     Color: defineColor(sequelize),
     Size: defineSize(sequelize),
     ProductStock: defineProductStock(sequelize),
-    ProductImage: defineProductImage(sequelize),
+    // ProductImage: defineProductImage(sequelize),
     ProductSize: defineProductSize(sequelize),
     ProductColor: defineProductColor(sequelize),
     Address: defineAddress(sequelize),
@@ -53,7 +53,7 @@ const {
     Color,
     Size,
     ProductStock,
-    ProductImage,
+    // ProductImage,
     ProductSize,
     ProductColor,
     User,
@@ -73,14 +73,13 @@ const {
 
 // Các quan hệ giữa các mô hình
 Product.hasMany(ProductStock, { foreignKey: 'product_id' });
-Product.hasMany(ProductImage, { foreignKey: 'product_id' });
 Product.belongsToMany(Size, { through: ProductSize, foreignKey: 'product_id', otherKey: 'size_id' });
 Product.belongsToMany(Color, { through: ProductColor, foreignKey: 'product_id', otherKey: 'color_id' });
 
 // Quan hệ giữa Color và các mô hình khác
 Color.belongsToMany(Product, { through: ProductColor, foreignKey: 'color_id', otherKey: 'product_id' });
 Color.hasMany(ProductStock, { foreignKey: 'color_id' });
-Color.hasMany(ProductImage, { foreignKey: 'color_id' });
+
 
 // Quan hệ giữa Size và các mô hình khác
 Size.belongsToMany(Product, { through: ProductSize, foreignKey: 'size_id', otherKey: 'product_id' });

@@ -46,7 +46,16 @@ module.exports = (sequelize) => {
         price: {
             type: DataTypes.DECIMAL(10, 2),
             allowNull: false
-        }
+        },
+        reserved: {
+            type: DataTypes.BOOLEAN,
+            defaultValue: false, // Mặc định không giữ chỗ
+            allowNull: false,
+        },
+        reserved_until: {
+            type: DataTypes.DATE,
+            allowNull: true, // Thời gian hết hạn giữ chỗ
+        },
     }, {
         tableName: 'order_items',
         timestamps: false

@@ -12,6 +12,8 @@ const { sequelize, Product, Color, Size, ProductStock, ProductImage, ProductSize
 const redisClient = require('./configs/redisClient');  // Import Redis client
 const rateLimiter = require('./middlewares/rateLimiter'); // Import rate limiting middleware
 const userRoute = require('./routes/userRoute'); // Import user routes
+const productRoute = require('./routes/productRoute'); // Import product routes
+
 
 const app = express();
 const corsOptions = {
@@ -47,6 +49,8 @@ app.get('/', async (req, res) => {
 
 // Use the user routes for all routes starting with /api/users
 app.use('/api/users', userRoute);  // Register the user routes here
+app.use('/api/products', productRoute);  // Register the product routes here
+
 
 // Database connection check
 sequelize.authenticate()

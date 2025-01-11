@@ -39,15 +39,6 @@ module.exports = (sequelize) => {
                 key: 'id'
             }
         },
-        reserved: {
-            type: DataTypes.BOOLEAN,
-            defaultValue: false, // Mặc định không giữ chỗ
-            allowNull: false,
-        },
-        reserved_until: {
-            type: DataTypes.DATE,
-            allowNull: true, // Thời gian hết hạn giữ chỗ
-        },
         status: {
             type: DataTypes.ENUM('pending', 'purchased', 'failed'),
             defaultValue: 'pending', // Trạng thái mặc định

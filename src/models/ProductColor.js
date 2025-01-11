@@ -24,6 +24,10 @@ module.exports = (sequelize) => {
                 key: 'id',
             },
         },
+        image: {
+            type: DataTypes.STRING, // hoặc DataTypes.TEXT nếu bạn muốn lưu trữ URL dài hơn
+            allowNull: true, // Có thể null nếu không có hình ảnh
+        },
     }, {
         tableName: 'product_colors',
         timestamps: false,
