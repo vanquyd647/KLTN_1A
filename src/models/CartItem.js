@@ -11,7 +11,7 @@ module.exports = (sequelize) => {
             type: DataTypes.BIGINT,
             allowNull: false,
             references: {
-                model: 'Carts', // Tên bảng Cart
+                model: 'carts', // Tên bảng Cart
                 key: 'id'
             }
         },
@@ -19,7 +19,7 @@ module.exports = (sequelize) => {
             type: DataTypes.BIGINT,
             allowNull: false,
             references: {
-                model: 'Products', // Tên bảng Product
+                model: 'products', // Tên bảng Product
                 key: 'id'
             }
         },
@@ -27,7 +27,7 @@ module.exports = (sequelize) => {
             type: DataTypes.BIGINT,
             allowNull: false,
             references: {
-                model: 'Sizes', // Tên bảng Size
+                model: 'sizes', // Tên bảng Size
                 key: 'id'
             }
         },
@@ -35,7 +35,7 @@ module.exports = (sequelize) => {
             type: DataTypes.BIGINT,
             allowNull: false,
             references: {
-                model: 'Colors', // Tên bảng Color
+                model: 'colors', // Tên bảng Color
                 key: 'id'
             }
         },

@@ -12,7 +12,7 @@ module.exports = (sequelize) => {
             type: DataTypes.BIGINT,
             allowNull: false,
             references: {
-                model: 'Colors',
+                model: 'colors',
                 key: 'id',
             },
         },

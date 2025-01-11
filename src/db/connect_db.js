@@ -17,6 +17,14 @@ const sequelize = new Sequelize(testdb, dbuser, dbpass, {
     logging: console.log,  // Bật logging để xem chi tiết
 });
 
+// const sequelize = new Sequelize('testdb', 'admin', 'admin123', {
+//     host: 'database-2.cvcqsyqyewxi.ap-southeast-1.rds.amazonaws.com',
+//     dialect: 'mysql',
+//     port: 3306,
+//     logging: console.log,
+// });
+
+
 // Kiểm tra kết nối
 async function testConnection() {
     try {

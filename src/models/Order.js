@@ -11,7 +11,7 @@ module.exports = (sequelize) => {
             type: DataTypes.BIGINT,
             allowNull: false,
             references: {
-                model: 'Users', // Tên bảng User
+                model: 'users', // Tên bảng User
                 key: 'id'
             }
         },

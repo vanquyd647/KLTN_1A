@@ -12,7 +12,7 @@ module.exports = (sequelize) => {
             type: DataTypes.BIGINT,
             allowNull: false,
             references: {
-                model: 'Products',
+                model: 'products',
                 key: 'id',
             },
         },
@@ -20,7 +20,7 @@ module.exports = (sequelize) => {
             type: DataTypes.BIGINT,
             allowNull: false,
             references: {
-                model: 'Sizes',
+                model: 'sizes',
                 key: 'id',
             },
         },

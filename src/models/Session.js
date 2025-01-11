@@ -13,7 +13,7 @@ module.exports = (sequelize) => {
             type: DataTypes.BIGINT,
             allowNull: false,
             references: {
-                model: 'Users',  // Tham chiếu đến bảng User
+                model: 'users',  // Tham chiếu đến bảng User
                 key: 'id',
             },
         },
