@@ -100,10 +100,25 @@ const getProducts = async () => {
                 status: { [Op.ne]: 'discontinued' },
             },
             include: [
-                { model: Category, as: 'categories', attributes: ['name'], through: { attributes: [] } },
-                { model: Color, as: 'productColors', attributes: ['color', 'hex_code'] },
-                { model: Size, as: 'productSizes', through: { model: ProductSize, attributes: [] }, attributes: ['size'] }  // Sửa lại alias từ 'Sizes' thành 'productSizes'
-            ]            
+                {
+                    model: Category,
+                    as: 'categories',
+                    attributes: ['id', 'name'],
+                    through: { attributes: [] },
+                },
+                {
+                    model: Color,
+                    as: 'productColors',
+                    attributes: ['id', 'color', 'hex_code'],
+                    through: { attributes: ['image'] },
+                },
+                {
+                    model: Size,
+                    as: 'productSizes',
+                    attributes: ['id', 'size'],
+                    through: { attributes: [] },
+                },
+            ],
         });
     } catch (error) {
         console.error('Error details:', error);
@@ -121,25 +136,23 @@ const getProductDetail = async (slug) => {
                 {
                     model: Category,
                     as: 'categories',
-                    attributes: ['name'],
-                    through: { attributes: [] }
+                    attributes: ['id', 'name'],
+                    through: { attributes: [] },
                 },
                 {
-                    model: Color,  // Liên kết tới Color
-                    as: 'productColors', // Alias đúng đã được định nghĩa
-                    attributes: ['color', 'hex_code'],
+                    model: Color,
+                    as: 'productColors',
+                    attributes: ['id', 'color', 'hex_code'],
+                    through: { attributes: ['image'] },
                 },
                 {
                     model: Size,
-                    as: 'productSizes', // Alias đúng đã được định nghĩa
-                    attributes: ['size']
+                    as: 'productSizes',
+                    attributes: ['id', 'size'],
+                    through: { attributes: [] },
                 },
                 {
                     model: ProductStock,
-                    include: [
-                        { model: Size, attributes: ['size'] },
-                        { model: Color, attributes: ['color'] }
-                    ]
                 }
             ],
         });
