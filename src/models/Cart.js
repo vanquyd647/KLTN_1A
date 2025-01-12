@@ -15,6 +15,15 @@ module.exports = (sequelize) => {
                 key: 'id',
             },
         },
+        session_id: {
+            type: DataTypes.STRING,
+            allowNull: true,
+            unique: true,
+        },
+        status: {
+            type: DataTypes.ENUM('active', 'archived'),
+            defaultValue: 'active',
+        },
         created_at: {
             type: DataTypes.DATE,
             defaultValue: DataTypes.NOW,
@@ -25,7 +34,7 @@ module.exports = (sequelize) => {
             defaultValue: DataTypes.NOW,
             allowNull: false,
         },
-    },{
+    }, {
         tableName: 'carts',
         timestamps: false,
     });

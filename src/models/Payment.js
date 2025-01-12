@@ -33,6 +33,10 @@ module.exports = (sequelize) => {
             allowNull: true,
             unique: true
         },
+        payment_date: {
+            type: DataTypes.DATE,
+            allowNull: true,
+        },       
         created_at: {
             type: DataTypes.DATE,
             defaultValue: DataTypes.NOW

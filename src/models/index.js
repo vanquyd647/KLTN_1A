@@ -22,6 +22,7 @@ const defineOrder = require('./Order');
 const defineOrderItem = require('./OrderItem');
 const definePayment = require('./Payment');
 const defineReview = require('./Review');
+const definePaymentLog = require('./PaymentLog');
 
 const models = {
     Product: defineProduct(sequelize),
@@ -45,6 +46,7 @@ const models = {
     OrderItem: defineOrderItem(sequelize),
     Payment: definePayment(sequelize),
     Review: defineReview(sequelize),
+    PaymentLog: definePaymentLog(sequelize),
 
 };
 
@@ -53,6 +55,7 @@ const {
     Color,
     Size,
     ProductStock,
+    Address,
     // ProductImage,
     ProductSize,
     ProductColor,
@@ -69,6 +72,7 @@ const {
     OrderItem,
     Payment,
     Review,
+    PaymentLog,
 } = models;
 
 // Các quan hệ giữa các mô hình
@@ -151,6 +155,16 @@ Review.belongsTo(Product, { foreignKey: 'product_id' });
 
 User.hasMany(Review, { foreignKey: 'user_id' });
 Review.belongsTo(User, { foreignKey: 'user_id' });
+
+// Mối quan hệ giữa Order và Address
+Order.belongsTo(Address, { foreignKey: 'address_id' });
+Address.hasMany(Order, { foreignKey: 'address_id' });
+
+// Mối quan hệ giữa Order và PaymentLog
+Order.hasMany(PaymentLog, { foreignKey: 'order_id', as: 'paymentLogs', onDelete: 'CASCADE', onUpdate: 'CASCADE', });
+PaymentLog.belongsTo(Order, { foreignKey: 'order_id', as: 'order', onDelete: 'CASCADE', onUpdate: 'CASCADE', });
+
+
 
 module.exports = {
     ...models,

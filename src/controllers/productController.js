@@ -16,6 +16,8 @@ const createProduct = async (req, res) => {
         }
 
         const newProduct = await productService.createProduct(productData);
+        // Xóa cache Redis sau khi thêm sản phẩm mới
+        await redisClient.del('products'); // Xóa cache của sản phẩm
         return res.status(201).json({
             status: 'success',
             code: 201,

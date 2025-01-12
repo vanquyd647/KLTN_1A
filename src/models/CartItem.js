@@ -39,11 +39,21 @@ module.exports = (sequelize) => {
                 key: 'id'
             }
         },
+        quantity: {
+            type: DataTypes.INTEGER,
+            defaultValue: 1,
+            allowNull: false,
+        },
         status: {
             type: DataTypes.ENUM('pending', 'purchased', 'failed'),
             defaultValue: 'pending', // Trạng thái mặc định
             allowNull: false,
         },
+        is_selected: {
+            type: DataTypes.BOOLEAN,
+            defaultValue: true,
+            allowNull: false,
+        },    
     }, {
         tableName: 'cart_items',
         timestamps: false
