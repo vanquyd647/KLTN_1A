@@ -126,6 +126,59 @@ const getProducts = async () => {
     }
 };
 
+const getProductsByPagination = async ({ page = 1, limit = 10 }) => {
+    try {
+        // Chuyển đổi page và limit thành số nguyên
+        const pageNumber = parseInt(page, 10);
+        const limitNumber = parseInt(limit, 10);
+
+        // Tính toán offset
+        const offset = (pageNumber - 1) * limitNumber;
+
+        // Truy vấn sản phẩm với phân trang
+        const { rows: products, count: totalItems } = await Product.findAndCountAll({
+            where: {
+                status: { [Op.ne]: 'discontinued' },
+            },
+            include: [
+                {
+                    model: Category,
+                    as: 'categories',
+                    attributes: ['id', 'name'],
+                    through: { attributes: [] },
+                },
+                {
+                    model: Color,
+                    as: 'productColors',
+                    attributes: ['id', 'color', 'hex_code'],
+                    through: { attributes: ['image'] },
+                },
+                {
+                    model: Size,
+                    as: 'productSizes',
+                    attributes: ['id', 'size'],
+                    through: { attributes: [] },
+                },
+            ],
+            limit: limitNumber, // Sử dụng giá trị số nguyên
+            offset, // Sử dụng giá trị số nguyên
+        });
+
+        // Trả về dữ liệu với thông tin phân trang
+        return {
+            products,
+            pagination: {
+                currentPage: pageNumber,
+                pageSize: limitNumber,
+                totalItems,
+                totalPages: Math.ceil(totalItems / limitNumber),
+            },
+        };
+    } catch (error) {
+        console.error('Error fetching paginated products:', error);
+        throw new Error('Failed to fetch products with pagination');
+    }
+};
 
 // 3. Hàm lấy chi tiết sản phẩm
 const getProductDetail = async (slug) => {
@@ -226,5 +279,6 @@ module.exports = {
     getProducts,
     getProductDetail,
     updateProduct,
-    deleteProduct
+    deleteProduct,
+    getProductsByPagination,
 };

@@ -1,5 +1,6 @@
 // models/ProductCategory.js
 const { DataTypes } = require('sequelize');
+
 module.exports = (sequelize) => {
     const ProductCategory = sequelize.define('ProductCategory', {
         id: {

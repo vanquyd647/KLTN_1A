@@ -64,9 +64,10 @@ const getProducts = async (req, res) => {
             });
         }
 
-        // Lưu kết quả vào cache Redis
-        await redisClient.set(cacheKey, JSON.stringify(products), 'EX', 3600); // Lưu cache trong 1 giờ
-
+        /// Lưu kết quả vào Redis với thời gian hết hạn (ví dụ 1 giờ)
+        await redisClient.set(cacheKey, JSON.stringify(products), {
+            EX: 3600, // thời gian hết hạn là 3600 giây
+        });
         // Trả về danh sách sản phẩm
         return res.status(200).json({
             status: 'success',
@@ -203,10 +204,62 @@ const deleteProduct = async (req, res) => {
     }
 };
 
+// Hàm lấy sản phẩm với phân trang
+const getProductsByPagination = async (req, res) => {
+    try {
+        const page = parseInt(req.query.page, 10) || 1; // Mặc định là 1 nếu không có tham số
+        const limit = parseInt(req.query.limit, 10) || 10; // Mặc định là 10 nếu không có tham số
+
+        const cacheKey = `products_page_${page}_limit_${limit}`;
+        const cachedProducts = await redisClient.get(cacheKey);
+
+        if (cachedProducts) {
+            return res.status(200).json({
+                status: 'success',
+                code: 200,
+                message: 'Lấy danh sách sản phẩm thành công từ cache',
+                data: JSON.parse(cachedProducts),
+            });
+        }
+
+        const products = await productService.getProductsByPagination({ page, limit });
+
+        if (!products || products.products.length === 0) {
+            return res.status(404).json({
+                status: 'error',
+                code: 404,
+                message: 'Không có sản phẩm nào',
+                data: null,
+            });
+        }
+
+        await redisClient.set(cacheKey, JSON.stringify(products), {
+            EX: 3600, // thời gian hết hạn là 3600 giây
+        });
+
+        return res.status(200).json({
+            status: 'success',
+            code: 200,
+            message: 'Lấy danh sách sản phẩm thành công',
+            data: products,
+        });
+    } catch (error) {
+        console.error('Error in getProductsByPagination:', error);
+        return res.status(500).json({
+            status: 'error',
+            code: 500,
+            message: 'Lỗi khi lấy danh sách sản phẩm',
+            data: null,
+        });
+    }
+};
+
+
 module.exports = {
     createProduct,
     getProducts,
     getProductDetail,
     updateProduct,
-    deleteProduct
+    deleteProduct,
+    getProductsByPagination,
 };

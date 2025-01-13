@@ -31,12 +31,23 @@ module.exports = (sequelize) => {
             type: DataTypes.DECIMAL(10, 2),
             defaultValue: 0.00,
         },
-        total_price: {
+        original_price: {
             type: DataTypes.DECIMAL(10, 2),
-            allowNull: false
+            allowNull: false,
+            comment: 'Giá gốc trước khi áp dụng giảm giá'
+        },
+        discounted_price: {
+            type: DataTypes.DECIMAL(10, 2),
+            allowNull: false,
+            comment: 'Giá sau khi áp dụng giảm giá'
+        },
+        final_price: {
+            type: DataTypes.DECIMAL(10, 2),
+            allowNull: false,
+            comment: 'Giá cuối cùng phải thanh toán'
         },
         status: {
-            type: DataTypes.ENUM('pending', 'completed', 'canceled', 'failed', 'in_payment'),
+            type: DataTypes.ENUM('pending', 'completed', 'canceled', 'failed', 'in_payment', 'in_progress'),
             allowNull: false,
             defaultValue: 'pending'
         },

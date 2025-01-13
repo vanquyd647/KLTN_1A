@@ -160,10 +160,17 @@ Review.belongsTo(User, { foreignKey: 'user_id' });
 Order.belongsTo(Address, { foreignKey: 'address_id' });
 Address.hasMany(Order, { foreignKey: 'address_id' });
 
+// Mối quan hệ giữa User và Address
+User.hasMany(Address, { foreignKey: 'user_id', as: 'addresses' });
+Address.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+
 // Mối quan hệ giữa Order và PaymentLog
 Order.hasMany(PaymentLog, { foreignKey: 'order_id', as: 'paymentLogs', onDelete: 'CASCADE', onUpdate: 'CASCADE', });
 PaymentLog.belongsTo(Order, { foreignKey: 'order_id', as: 'order', onDelete: 'CASCADE', onUpdate: 'CASCADE', });
 
+// Mối quan hệ giữa Session và Cart
+Session.hasMany(Cart, { foreignKey: 'session_id', as: 'carts' });
+Cart.belongsTo(Session, { foreignKey: 'session_id', as: 'session' });
 
 
 module.exports = {

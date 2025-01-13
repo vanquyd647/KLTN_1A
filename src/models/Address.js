@@ -8,6 +8,14 @@ module.exports = (sequelize) => {
             primaryKey: true,
             autoIncrement: true,
         },
+        user_id: {
+            type: DataTypes.BIGINT,
+            allowNull: false,
+            references: {
+                model: 'users', 
+                key: 'id',
+            },
+        },
         street: {
             type: DataTypes.STRING,
             allowNull: false,

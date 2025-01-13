@@ -16,10 +16,11 @@ const productRoute = require('./routes/productRoute'); // Import product routes
 
 
 const app = express();
+// Define CORS options
 const corsOptions = {
-    origin: '*',  // Allow all domains (change to your domain when deploying)
-    methods: 'GET, POST, PUT, DELETE',
-    allowedHeaders: 'Content-Type, Authorization',
+    origin: 'http://localhost:3000', // Allow requests from your frontend domain
+    methods: 'GET, POST, PUT, DELETE', // Allowed HTTP methods
+    allowedHeaders: 'Content-Type, Authorization', // Allowed headers
 };
 
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
