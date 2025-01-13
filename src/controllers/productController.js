@@ -208,7 +208,7 @@ const deleteProduct = async (req, res) => {
 const getProductsByPagination = async (req, res) => {
     try {
         const page = parseInt(req.query.page, 10) || 1; // Mặc định là 1 nếu không có tham số
-        const limit = parseInt(req.query.limit, 10) || 10; // Mặc định là 10 nếu không có tham số
+        const limit = parseInt(req.query.limit, 10) || 20; // Mặc định là 10 nếu không có tham số
 
         const cacheKey = `products_page_${page}_limit_${limit}`;
         const cachedProducts = await redisClient.get(cacheKey);

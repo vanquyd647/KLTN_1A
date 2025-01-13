@@ -126,17 +126,21 @@ const getProducts = async () => {
     }
 };
 
-const getProductsByPagination = async ({ page = 1, limit = 10 }) => {
+const getProductsByPagination = async ({ page = 1, limit = 20 }) => {
     try {
-        // Chuyển đổi page và limit thành số nguyên
         const pageNumber = parseInt(page, 10);
         const limitNumber = parseInt(limit, 10);
-
-        // Tính toán offset
         const offset = (pageNumber - 1) * limitNumber;
 
-        // Truy vấn sản phẩm với phân trang
-        const { rows: products, count: totalItems } = await Product.findAndCountAll({
+        // Tính tổng sản phẩm thực sự
+        const totalItems = await Product.count({
+            where: {
+                status: { [Op.ne]: 'discontinued' },
+            },
+        });
+
+        // Lấy dữ liệu sản phẩm với phân trang
+        const products = await Product.findAll({
             where: {
                 status: { [Op.ne]: 'discontinued' },
             },
@@ -160,8 +164,8 @@ const getProductsByPagination = async ({ page = 1, limit = 10 }) => {
                     through: { attributes: [] },
                 },
             ],
-            limit: limitNumber, // Sử dụng giá trị số nguyên
-            offset, // Sử dụng giá trị số nguyên
+            limit: limitNumber,
+            offset,
         });
 
         // Trả về dữ liệu với thông tin phân trang
@@ -179,6 +183,7 @@ const getProductsByPagination = async ({ page = 1, limit = 10 }) => {
         throw new Error('Failed to fetch products with pagination');
     }
 };
+
 
 // 3. Hàm lấy chi tiết sản phẩm
 const getProductDetail = async (slug) => {
