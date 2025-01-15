@@ -235,7 +235,9 @@ class UserController {
             };
 
             // Lưu thông tin vào Redis cache với thời gian hết hạn 3600 giây (1 giờ)
-            await redisClient.set(`user:${userId}:profile`, JSON.stringify(userProfile), 'EX', 3600);
+            await redisClient.set(`user:${userId}:profile`, JSON.stringify(userProfile), {
+                    EX: 3600
+                });
 
             return res.status(200).json({
                 status: 'success',

@@ -51,7 +51,7 @@ module.exports = (sequelize) => {
         },
         is_selected: {
             type: DataTypes.BOOLEAN,
-            defaultValue: true,
+            defaultValue: false,
             allowNull: false,
         },    
     }, {

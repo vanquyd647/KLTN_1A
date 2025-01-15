@@ -1,9 +1,11 @@
 const express = require('express');
 const productController = require('../controllers/productController');
 const rateLimiter = require('../middlewares/rateLimiter');
+const ensureSession = require('../middlewares/ensureSession'); // Import ensureSession middleware
 
 const router = express.Router();
 
+router.use(ensureSession);
 // Định nghĩa các route cho sản phẩm với rateLimiter
 
 // Tạo sản phẩm mới (POST /products)

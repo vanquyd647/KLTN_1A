@@ -118,16 +118,16 @@ User.hasOne(Cart, { foreignKey: 'user_id' });
 Cart.belongsTo(User, { foreignKey: 'user_id' });
 
 Cart.hasMany(CartItem, { foreignKey: 'cart_id' });
-CartItem.belongsTo(Cart, { foreignKey: 'cart_id' });
+CartItem.belongsTo(Cart, { foreignKey: 'cart_id', as: 'cart' });
 
 Product.hasMany(CartItem, { foreignKey: 'product_id' });
-CartItem.belongsTo(Product, { foreignKey: 'product_id' });
+CartItem.belongsTo(Product, { foreignKey: 'product_id', as: 'product' });
 
 Size.hasMany(CartItem, { foreignKey: 'size_id' });
-CartItem.belongsTo(Size, { foreignKey: 'size_id' });
+CartItem.belongsTo(Size, { foreignKey: 'size_id', as: 'size' });
 
 Color.hasMany(CartItem, { foreignKey: 'color_id' });
-CartItem.belongsTo(Color, { foreignKey: 'color_id' });
+CartItem.belongsTo(Color, { foreignKey: 'color_id', as: 'color' });
 
 // Mối quan hệ giữa Order và User
 User.hasMany(Order, { foreignKey: 'user_id' });
@@ -171,6 +171,19 @@ PaymentLog.belongsTo(Order, { foreignKey: 'order_id', as: 'order', onDelete: 'CA
 // Mối quan hệ giữa Session và Cart
 Session.hasMany(Cart, { foreignKey: 'session_id', as: 'carts' });
 Cart.belongsTo(Session, { foreignKey: 'session_id', as: 'session' });
+
+// Mối quan hệ giữa CartItem và ProductStock
+CartItem.belongsTo(ProductStock, {
+    foreignKey: 'product_id', // Khóa ngoại liên kết
+    targetKey: 'product_id', // Trường được tham chiếu trong ProductStock
+    as: 'stock', // Alias để sử dụng trong truy vấn
+});
+ProductStock.hasMany(CartItem, {
+    foreignKey: 'product_id', // Khóa ngoại từ CartItem
+    sourceKey: 'product_id', // Trường trong ProductStock
+    as: 'cartItems', // Alias nếu cần
+});
+
 
 
 module.exports = {

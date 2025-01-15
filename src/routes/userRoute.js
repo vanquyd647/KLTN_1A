@@ -3,7 +3,9 @@ const router = express.Router();
 const UserController = require('../controllers/userController');
 const authMiddleware = require('../middlewares/authMiddleware');  // Optional, if authentication is needed // Import Redis client
 const rateLimiter = require('../middlewares/rateLimiter');  // Import rate limiting middleware
+const ensureSession = require('../middlewares/ensureSession'); // Import ensureSession middleware
 
+router.use(ensureSession); // Apply ensureSession middleware to all user routes
 // Apply rate limiting to specific routes (for example, register and login)
 router.use('/register', rateLimiter);
 router.use('/login', rateLimiter);

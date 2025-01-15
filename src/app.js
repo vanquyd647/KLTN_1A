@@ -2,6 +2,7 @@ require('dotenv').config(); // Load environment variables from .env file
 
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./configs/swagger');
+const cookieParser = require('cookie-parser');
 
 const express = require('express');
 const morgan = require('morgan');
@@ -13,6 +14,7 @@ const redisClient = require('./configs/redisClient');  // Import Redis client
 const rateLimiter = require('./middlewares/rateLimiter'); // Import rate limiting middleware
 const userRoute = require('./routes/userRoute'); // Import user routes
 const productRoute = require('./routes/productRoute'); // Import product routes
+const cartRoute = require('./routes/cartRoute'); // Import cart routes
 
 
 const app = express();
@@ -20,11 +22,13 @@ const app = express();
 const corsOptions = {
     origin: 'http://localhost:3000', // Allow requests from your frontend domain
     methods: 'GET, POST, PUT, DELETE', // Allowed HTTP methods
-    allowedHeaders: 'Content-Type, Authorization', // Allowed headers
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-session-id'], // Allowed headers
+    exposedHeaders: ['x-session-id'],
 };
 
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
+app.use(cookieParser()); // Parse cookies
 // Init middleware
 app.use(rateLimiter); // Use rate-limiting middleware for anti-DDoS protection
 app.use(morgan('dev')); // Log requests in dev format
@@ -51,6 +55,7 @@ app.get('/', async (req, res) => {
 // Use the user routes for all routes starting with /api/users
 app.use('/api/users', userRoute);  // Register the user routes here
 app.use('/api/products', productRoute);  // Register the product routes here
+app.use('/api/carts', cartRoute);  // Register the cart routes here
 
 
 // Database connection check
