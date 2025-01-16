@@ -2,7 +2,7 @@ const UserService = require('../services/userService');
 const TokenService = require('../services/tokenService');
 const OtpService = require('../services/otpService');
 const EmailService = require('../services/emailService');
-const redisClient = require('../configs/redisClient'); 
+const redisClient = require('../configs/redisClient');
 
 const userStore = new Map();
 
@@ -145,10 +145,9 @@ class UserController {
     static async refreshToken(req, res) {
         try {
             const { get_refreshToken } = req.body;
-            const { get_userId } = req.body;
 
             // Cấp phát token mới
-            const tokens = await TokenService.refreshTokens(get_refreshToken, get_userId);
+            const tokens = await TokenService.refreshTokens(get_refreshToken);
             res.status(200).json({
                 status: 'success',
                 code: 200,
@@ -236,8 +235,8 @@ class UserController {
 
             // Lưu thông tin vào Redis cache với thời gian hết hạn 3600 giây (1 giờ)
             await redisClient.set(`user:${userId}:profile`, JSON.stringify(userProfile), {
-                    EX: 3600
-                });
+                EX: 3600
+            });
 
             return res.status(200).json({
                 status: 'success',

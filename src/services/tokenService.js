@@ -69,11 +69,12 @@ class TokenService {
     }
 
     /**
-     * Cấp phát Access Token mới từ Refresh Token
-     * @param {string} refreshToken - Refresh Token cũ
-     * @returns {Object} - Access Token mới và Refresh Token mới
+     * Xác minh Refresh Token
+     * @param {string} refreshToken - Refresh Token cần xác minh
+     * @returns {Object} - Dữ liệu của token nếu hợp lệ
+     * @throws {Error} - Nếu token không hợp lệ hoặc đã hết hạn
      */
-    static async refreshTokens(refreshToken) {
+    static async verifyRefreshToken(refreshToken) {
         // Tìm Refresh Token trong cơ sở dữ liệu
         const tokenData = await TokenService.findToken(refreshToken);
         if (!tokenData) {
@@ -90,6 +91,18 @@ class TokenService {
         if (!userData) {
             throw new Error("Refresh Token không hợp lệ");
         }
+
+        return userData;
+    }
+
+    /**
+     * Cấp phát Access Token mới từ Refresh Token
+     * @param {string} refreshToken - Refresh Token cũ
+     * @returns {Object} - Access Token mới và Refresh Token mới
+     */
+    static async refreshTokens(refreshToken) {
+        // Xác minh Refresh Token
+        const userData = await TokenService.verifyRefreshToken(refreshToken);
 
         // Tạo Access Token và Refresh Token mới
         const payload = { userId: userData.userId };
