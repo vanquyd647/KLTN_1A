@@ -254,6 +254,106 @@ const getProductsByPagination = async (req, res) => {
     }
 };
 
+// API for New Products with Pagination
+const getNewProductsByPagination = async (req, res) => {
+    try {
+        const page = parseInt(req.query.page, 10) || 1; // Default to 1 if not provided
+        const limit = parseInt(req.query.limit, 10) || 20; // Default to 20 if not provided
+
+        const cacheKey = `new_products_page_${page}_limit_${limit}`;
+        const cachedProducts = await redisClient.get(cacheKey);
+
+        if (cachedProducts) {
+            return res.status(200).json({
+                status: 'success',
+                code: 200,
+                message: 'Lấy danh sách sản phẩm mới thành công từ cache',
+                data: JSON.parse(cachedProducts),
+            });
+        }
+
+        const products = await productService.getNewProductsByPagination({ page, limit });
+
+        if (!products || products.products.length === 0) {
+            return res.status(404).json({
+                status: 'error',
+                code: 404,
+                message: 'Không có sản phẩm mới nào',
+                data: null,
+            });
+        }
+
+        await redisClient.set(cacheKey, JSON.stringify(products), {
+            EX: 3600, // Cache for 1 hour
+        });
+
+        return res.status(200).json({
+            status: 'success',
+            code: 200,
+            message: 'Lấy danh sách sản phẩm mới thành công',
+            data: products,
+        });
+    } catch (error) {
+        console.error('Error in getNewProductsByPagination:', error);
+        return res.status(500).json({
+            status: 'error',
+            code: 500,
+            message: 'Lỗi khi lấy danh sách sản phẩm mới',
+            data: null,
+        });
+    }
+};
+
+// API for Featured Products with Pagination
+const getFeaturedProductsByPagination = async (req, res) => {
+    try {
+        const page = parseInt(req.query.page, 10) || 1; // Default to 1 if not provided
+        const limit = parseInt(req.query.limit, 10) || 20; // Default to 20 if not provided
+
+        const cacheKey = `featured_products_page_${page}_limit_${limit}`;
+        const cachedProducts = await redisClient.get(cacheKey);
+
+        if (cachedProducts) {
+            return res.status(200).json({
+                status: 'success',
+                code: 200,
+                message: 'Lấy danh sách sản phẩm nổi bật thành công từ cache',
+                data: JSON.parse(cachedProducts),
+            });
+        }
+
+        const products = await productService.getFeaturedProductsByPagination({ page, limit });
+
+        if (!products || products.products.length === 0) {
+            return res.status(404).json({
+                status: 'error',
+                code: 404,
+                message: 'Không có sản phẩm nổi bật nào',
+                data: null,
+            });
+        }
+
+        await redisClient.set(cacheKey, JSON.stringify(products), {
+            EX: 3600, // Cache for 1 hour
+        });
+
+        return res.status(200).json({
+            status: 'success',
+            code: 200,
+            message: 'Lấy danh sách sản phẩm nổi bật thành công',
+            data: products,
+        });
+    } catch (error) {
+        console.error('Error in getFeaturedProductsByPagination:', error);
+        return res.status(500).json({
+            status: 'error',
+            code: 500,
+            message: 'Lỗi khi lấy danh sách sản phẩm nổi bật',
+            data: null,
+        });
+    }
+};
+
 
 module.exports = {
     createProduct,
@@ -262,4 +362,6 @@ module.exports = {
     updateProduct,
     deleteProduct,
     getProductsByPagination,
+    getNewProductsByPagination,
+    getFeaturedProductsByPagination,
 };

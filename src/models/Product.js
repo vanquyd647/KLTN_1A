@@ -29,6 +29,10 @@ module.exports = (sequelize) => {
             type: DataTypes.DOUBLE,
             allowNull: true,
         },
+        is_new: {
+            type: DataTypes.BOOLEAN,
+            defaultValue: false,
+        },
         is_featured: {
             type: DataTypes.BOOLEAN,
             defaultValue: false,

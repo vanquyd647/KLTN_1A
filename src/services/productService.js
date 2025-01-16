@@ -22,6 +22,7 @@ const createProduct = async (productData) => {
             description: productData.description,
             price: productData.price,
             discount_price: productData.discount_price || null,
+            is_new: productData.is_new || false,
             is_featured: productData.is_featured || false,
             status: productData.status,
         }, { transaction: t });
@@ -184,6 +185,128 @@ const getProductsByPagination = async ({ page = 1, limit = 20 }) => {
     }
 };
 
+// 2. Hàm lấy sản phẩm mới với phân trang
+const getNewProductsByPagination = async ({ page = 1, limit = 20 }) => {
+    try {
+        const pageNumber = parseInt(page, 10);
+        const limitNumber = parseInt(limit, 10);
+        const offset = (pageNumber - 1) * limitNumber;
+
+        // Count total new products
+        const totalItems = await Product.count({
+            where: {
+                is_new: true,
+                status: { [Op.ne]: 'discontinued' },
+            },
+        });
+
+        // Fetch paginated new products
+        const products = await Product.findAll({
+            where: {
+                is_new: true,
+                status: { [Op.ne]: 'discontinued' },
+            },
+            include: [
+                {
+                    model: Category,
+                    as: 'categories',
+                    attributes: ['id', 'name'],
+                    through: { attributes: [] },
+                },
+                {
+                    model: Color,
+                    as: 'productColors',
+                    attributes: ['id', 'color', 'hex_code'],
+                    through: { attributes: ['image'] },
+                },
+                {
+                    model: Size,
+                    as: 'productSizes',
+                    attributes: ['id', 'size'],
+                    through: { attributes: [] },
+                },
+            ],
+            limit: limitNumber,
+            offset,
+        });
+
+        return {
+            products,
+            pagination: {
+                currentPage: pageNumber,
+                pageSize: limitNumber,
+                totalItems,
+                totalPages: Math.ceil(totalItems / limitNumber),
+            },
+        };
+    } catch (error) {
+        console.error('Error fetching new products with pagination:', error);
+        throw new Error('Failed to fetch new products with pagination');
+    }
+};
+
+// 3. Hàm lấy sản phẩm nổi bật với phân trang
+const getFeaturedProductsByPagination = async ({ page = 1, limit = 20 }) => {
+    try {
+        const pageNumber = parseInt(page, 10);
+        const limitNumber = parseInt(limit, 10);
+        const offset = (pageNumber - 1) * limitNumber;
+
+        // Count total featured products
+        const totalItems = await Product.count({
+            where: {
+                is_featured: true,
+                status: { [Op.ne]: 'discontinued' },
+            },
+        });
+
+        // Fetch paginated featured products
+        const products = await Product.findAll({
+            where: {
+                is_featured: true,
+                status: { [Op.ne]: 'discontinued' },
+            },
+            include: [
+                {
+                    model: Category,
+                    as: 'categories',
+                    attributes: ['id', 'name'],
+                    through: { attributes: [] },
+                },
+                {
+                    model: Color,
+                    as: 'productColors',
+                    attributes: ['id', 'color', 'hex_code'],
+                    through: { attributes: ['image'] },
+                },
+                {
+                    model: Size,
+                    as: 'productSizes',
+                    attributes: ['id', 'size'],
+                    through: { attributes: [] },
+                },
+            ],
+            limit: limitNumber,
+            offset,
+        });
+
+        return {
+            products,
+            pagination: {
+                currentPage: pageNumber,
+                pageSize: limitNumber,
+                totalItems,
+                totalPages: Math.ceil(totalItems / limitNumber),
+            },
+        };
+    } catch (error) {
+        console.error('Error fetching featured products with pagination:', error);
+        throw new Error('Failed to fetch featured products with pagination');
+    }
+};
+
+
+
 
 // 3. Hàm lấy chi tiết sản phẩm
 const getProductDetail = async (slug) => {
@@ -286,4 +409,6 @@ module.exports = {
     updateProduct,
     deleteProduct,
     getProductsByPagination,
+    getNewProductsByPagination, 
+    getFeaturedProductsByPagination, 
 };

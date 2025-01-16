@@ -17,6 +17,12 @@ router.get('/', rateLimiter, productController.getProducts);
 // Lấy sản phẩm với phân trang (GET /products/pagination)
 router.get('/pagination', rateLimiter, productController.getProductsByPagination);
 
+// New routes
+router.get('/new', productController.getNewProductsByPagination);
+
+// Featured routes
+router.get('/featured', productController.getFeaturedProductsByPagination);
+
 // Lấy chi tiết sản phẩm (GET /products/:slug)
 router.get('/:slug', rateLimiter, productController.getProductDetail);
 
