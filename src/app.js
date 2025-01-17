@@ -3,18 +3,21 @@ require('dotenv').config(); // Load environment variables from .env file
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./configs/swagger');
 const cookieParser = require('cookie-parser');
+const cron = require('node-cron');
 
 const express = require('express');
 const morgan = require('morgan');
 const helmet = require('helmet');
 const compression = require('compression');
 const cors = require('cors');
-const { sequelize, Product, Color, Size, ProductStock, ProductImage, ProductSize, ProductColor, Address, User, Role, UserRole, Token, Cart } = require('./models');  // Import Sequelize and initialized models
+const { sequelize, Product, Color, Size, ProductStock, ProductImage, ProductSize, ProductColor, Address, User, Role, UserRole, Token, Cart } = require('./models');
+const { updateIsNewStatus } = require('../src/script/updateIsNewStatus');
 const redisClient = require('./configs/redisClient');  // Import Redis client
 const rateLimiter = require('./middlewares/rateLimiter'); // Import rate limiting middleware
 const userRoute = require('./routes/userRoute'); // Import user routes
 const productRoute = require('./routes/productRoute'); // Import product routes
 const cartRoute = require('./routes/cartRoute'); // Import cart routes
+const reviewRoutes = require('./routes/reviewRoutes');
 
 
 const app = express();
@@ -56,6 +59,7 @@ app.get('/', async (req, res) => {
 app.use('/api/users', userRoute);  // Register the user routes here
 app.use('/api/products', productRoute);  // Register the product routes here
 app.use('/api/carts', cartRoute);  // Register the cart routes here
+app.use('/api/reviews', reviewRoutes);
 
 
 // Database connection check
@@ -75,6 +79,12 @@ sequelize.sync({ force: false })  // Use `force: false` to avoid data loss
     .catch(err => {
         console.error('Error syncing the database:', err);
     });
+
+// Thiết lập cron job chạy lúc 2:00 AM mỗi ngày
+cron.schedule('0 2 * * *', () => {
+    console.log('Running is_new update cron job...');
+    updateIsNewStatus();
+});
 
 // Export the app for server use
 module.exports = app;
