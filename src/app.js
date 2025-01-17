@@ -23,11 +23,12 @@ const reviewRoutes = require('./routes/reviewRoutes');
 const app = express();
 // Define CORS options
 const corsOptions = {
-    origin: 'http://localhost:3000', // Allow requests from your frontend domain
-    methods: 'GET, POST, PUT, DELETE', // Allowed HTTP methods
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-session-id'], // Allowed headers
-    exposedHeaders: ['x-session-id'],
+    origin: ['http://localhost:3000', 'https://kltn-1-b-quys-projects-d07a5005.vercel.app'], // Danh sách miền được phép
+    methods: 'GET, POST, PUT, DELETE', // Các phương thức HTTP được phép
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-session-id'], // Các header được phép
+    exposedHeaders: ['x-session-id'], // Các header được "phơi bày" cho client
 };
+
 
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
