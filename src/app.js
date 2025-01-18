@@ -24,11 +24,7 @@ const productsByCategoryRoute = require('./routes/productsByCategoryRoute');
 const app = express();
 // Define CORS options
 const corsOptions = {
-<<<<<<< HEAD
     origin: ['http://localhost:3000', 'https://kltn-1-b.vercel.app'], // Danh sách miền được phép
-=======
-    origin: ['http://localhost:3000', 'https://kltn-1-b-quys-projects-d07a5005.vercel.app'], // Danh sách miền được phép
->>>>>>> main
     methods: 'GET, POST, PUT, DELETE', // Các phương thức HTTP được phép
     allowedHeaders: ['Content-Type', 'Authorization', 'x-session-id'], // Các header được phép
     exposedHeaders: ['x-session-id'], // Các header được "phơi bày" cho client
