@@ -4,94 +4,108 @@ const slugify = require('slugify');
 const { Op } = require('sequelize');
 
 // Hàm tạo slug tự động từ tên sản phẩm
-const generateSlug = (name) => {
-    return slugify(name, { lower: true, strict: true });
+// Hàm tạo slug từ tên sản phẩm và id sản phẩm
+const generateSlug = (name, id) => {
+    return slugify(`${name}-FS-${id}`, { lower: true, strict: true });
 };
 
 const createProduct = async (productData) => {
     const t = await sequelize.transaction();
 
     try {
-        // 1. Tạo slug tự động
-        const slug = generateSlug(productData.product_name);
+        const productsToAdd = Array.isArray(productData) ? productData : [productData];
 
-        // 2. Thêm sản phẩm vào bảng Product
-        const newProduct = await Product.create({
-            product_name: productData.product_name,
-            slug: slug,
-            description: productData.description,
-            price: productData.price,
-            discount_price: productData.discount_price || null,
-            is_new: productData.is_new || false,
-            is_featured: productData.is_featured || false,
-            status: productData.status,
-        }, { transaction: t });
+        const createdProducts = [];
 
-        // 3. Thêm các danh mục nếu chưa có và liên kết với sản phẩm
-        for (const categoryName of productData.categories) {
-            const [category, created] = await Category.findOrCreate({
-                where: { name: categoryName },
-                defaults: { name: categoryName, description: '' },
-                transaction: t
-            });
-            await ProductCategory.create({
-                product_id: newProduct.id,
-                category_id: category.id,
+        for (const data of productsToAdd) {
+            // 1. Tạo sản phẩm mà không có slug (slug sẽ thêm sau khi có product_id)
+            const newProduct = await Product.create({
+                product_name: data.product_name,
+                description: data.description,
+                price: data.price,
+                discount_price: data.discount_price || null,
+                slug: '',
+                is_new: data.is_new || false,
+                is_featured: data.is_featured || false,
+                status: data.status,
             }, { transaction: t });
-        }
 
-        // 4. Thêm các màu sắc nếu chưa có và liên kết với sản phẩm
-        for (const colorData of productData.colors) {
-            const [color, created] = await Color.findOrCreate({
-                where: { color: colorData.color },
-                defaults: { color: colorData.color, hex_code: colorData.hex_code || null },
-                transaction: t
-            });
-            await ProductColor.create({
-                product_id: newProduct.id,
-                color_id: color.id,
-                image: colorData.image || null,
-            }, { transaction: t });
-        }
+            // 2. Tạo slug bằng cách kết hợp product_name và product_id
+            const slug = generateSlug(data.product_name, newProduct.id);
 
-        // 5. Thêm các kích thước nếu chưa có và liên kết với sản phẩm
-        for (const sizeName of productData.sizes) {
-            const [size, created] = await Size.findOrCreate({
-                where: { size: sizeName },
-                defaults: { size: sizeName },
-                transaction: t
-            });
-            await ProductSize.create({
-                product_id: newProduct.id,
-                size_id: size.id,
-            }, { transaction: t });
-        }
+            // 3. Cập nhật lại slug cho sản phẩm
+            await newProduct.update({ slug }, { transaction: t });
 
-        // 6. Thêm thông tin tồn kho cho từng sự kết hợp của sản phẩm, màu sắc và kích thước
-        for (const stock of productData.stock) {
-            const { size, color, quantity } = stock;
-            const sizeRecord = await Size.findOne({ where: { size: size }, transaction: t });
-            const colorRecord = await Color.findOne({ where: { color: color }, transaction: t });
-
-            if (sizeRecord && colorRecord) {
-                await ProductStock.create({
+            // 4. Thêm các danh mục nếu chưa có và liên kết với sản phẩm
+            for (const categoryName of data.categories) {
+                const [category] = await Category.findOrCreate({
+                    where: { name: categoryName },
+                    defaults: { name: categoryName, description: '' },
+                    transaction: t,
+                });
+                await ProductCategory.create({
                     product_id: newProduct.id,
-                    size_id: sizeRecord.id,
-                    color_id: colorRecord.id,
-                    quantity: quantity,
+                    category_id: category.id,
                 }, { transaction: t });
             }
+
+            // 5. Thêm các màu sắc nếu chưa có và liên kết với sản phẩm
+            for (const colorData of data.colors) {
+                const [color] = await Color.findOrCreate({
+                    where: { color: colorData.color },
+                    defaults: { color: colorData.color, hex_code: colorData.hex_code || null },
+                    transaction: t,
+                });
+                await ProductColor.create({
+                    product_id: newProduct.id,
+                    color_id: color.id,
+                    image: colorData.image || null,
+                }, { transaction: t });
+            }
+
+            // 6. Thêm các kích thước nếu chưa có và liên kết với sản phẩm
+            for (const sizeName of data.sizes) {
+                const [size] = await Size.findOrCreate({
+                    where: { size: sizeName },
+                    defaults: { size: sizeName },
+                    transaction: t,
+                });
+                await ProductSize.create({
+                    product_id: newProduct.id,
+                    size_id: size.id,
+                }, { transaction: t });
+            }
+
+            // 7. Thêm thông tin tồn kho cho từng sự kết hợp của sản phẩm, màu sắc và kích thước
+            for (const stock of data.stock) {
+                const { size, color, quantity } = stock;
+                const sizeRecord = await Size.findOne({ where: { size: size }, transaction: t });
+                const colorRecord = await Color.findOne({ where: { color: color }, transaction: t });
+
+                if (sizeRecord && colorRecord) {
+                    await ProductStock.create({
+                        product_id: newProduct.id,
+                        size_id: sizeRecord.id,
+                        color_id: colorRecord.id,
+                        quantity: quantity,
+                    }, { transaction: t });
+                }
+            }
+
+            createdProducts.push(newProduct);
         }
 
         // Cam kết giao dịch
         await t.commit();
-        return newProduct;
+        return createdProducts;
     } catch (error) {
         // Nếu có lỗi, rollback giao dịch
         await t.rollback();
         throw error;
     }
 };
+
+
 
 // Hàm lấy tất cả sản phẩm
 const getProducts = async () => {

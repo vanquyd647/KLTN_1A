@@ -18,6 +18,7 @@ const userRoute = require('./routes/userRoute'); // Import user routes
 const productRoute = require('./routes/productRoute'); // Import product routes
 const cartRoute = require('./routes/cartRoute'); // Import cart routes
 const reviewRoutes = require('./routes/reviewRoutes');
+const productsByCategoryRoute = require('./routes/productsByCategoryRoute');
 
 
 const app = express();
@@ -61,6 +62,7 @@ app.use('/api/users', userRoute);  // Register the user routes here
 app.use('/api/products', productRoute);  // Register the product routes here
 app.use('/api/carts', cartRoute);  // Register the cart routes here
 app.use('/api/reviews', reviewRoutes);
+app.use('/api/products-by-category', productsByCategoryRoute);
 
 
 // Database connection check
