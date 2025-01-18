@@ -23,14 +23,14 @@ class UserController {
             }
 
             // Kiểm tra xem email đã tồn tại trong bộ nhớ tạm
-            if (userStore.has(email)) {
-                return res.status(400).json({
-                    status: 'error',
-                    code: 400,
-                    message: 'Email này đang chờ xác thực OTP. Vui lòng đợi trước khi đăng ký lại.',
-                    data: null
-                });
-            }
+            // if (userStore.has(email)) {
+            //     return res.status(400).json({
+            //         status: 'error',
+            //         code: 400,
+            //         message: 'Email này đang chờ xác thực OTP. Vui lòng đợi trước khi đăng ký lại.',
+            //         data: null
+            //     });
+            // }
 
             // Tạo OTP và lưu vào bộ nhớ tạm
             const otp = OtpService.generateOtp();

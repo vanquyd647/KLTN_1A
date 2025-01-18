@@ -58,10 +58,15 @@ async function getAverageRating(productId) {
     try {
         const result = await Review.findOne({
             where: { product_id: productId },
-            attributes: [[Review.sequelize.fn('AVG', Review.sequelize.col('rating')), 'average_rating']],
+            attributes: [[Review.sequelize.fn('AVG', Review.sequelize.col('rating')), 'average_rating'],
+            [Review.sequelize.fn('COUNT', Review.sequelize.col('id')), 'total_reviews'],
+            ],
             raw: true,
         });
-        return result?.average_rating ? parseFloat(result.average_rating).toFixed(2) : 0;
+        return {
+            averageRating: result?.average_rating ? parseFloat(result.average_rating).toFixed(2) : 0,
+            totalReviews: result?.total_reviews ? parseInt(result.total_reviews, 10) : 0,
+        };
     } catch (error) {
         console.error('Error calculating average rating:', error);
         throw new Error('Could not calculate average rating');

@@ -18,12 +18,17 @@ const userRoute = require('./routes/userRoute'); // Import user routes
 const productRoute = require('./routes/productRoute'); // Import product routes
 const cartRoute = require('./routes/cartRoute'); // Import cart routes
 const reviewRoutes = require('./routes/reviewRoutes');
+const productsByCategoryRoute = require('./routes/productsByCategoryRoute');
 
 
 const app = express();
 // Define CORS options
 const corsOptions = {
+<<<<<<< HEAD
     origin: ['http://localhost:3000', 'https://kltn-1-b.vercel.app'], // Danh sách miền được phép
+=======
+    origin: ['http://localhost:3000', 'https://kltn-1-b-quys-projects-d07a5005.vercel.app'], // Danh sách miền được phép
+>>>>>>> main
     methods: 'GET, POST, PUT, DELETE', // Các phương thức HTTP được phép
     allowedHeaders: ['Content-Type', 'Authorization', 'x-session-id'], // Các header được phép
     exposedHeaders: ['x-session-id'], // Các header được "phơi bày" cho client
@@ -61,6 +66,7 @@ app.use('/api/users', userRoute);  // Register the user routes here
 app.use('/api/products', productRoute);  // Register the product routes here
 app.use('/api/carts', cartRoute);  // Register the cart routes here
 app.use('/api/reviews', reviewRoutes);
+app.use('/api/products-by-category', productsByCategoryRoute);
 
 
 // Database connection check

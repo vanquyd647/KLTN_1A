@@ -184,7 +184,11 @@ ProductStock.hasMany(CartItem, {
     as: 'cartItems', // Alias nếu cần
 });
 
-
+// Ensure ProductCategory is properly defined
+ProductCategory.belongsTo(Product, { foreignKey: 'product_id' });
+ProductCategory.belongsTo(Category, { foreignKey: 'category_id' });
+Product.hasMany(ProductCategory, { foreignKey: 'product_id' });
+Category.hasMany(ProductCategory, { foreignKey: 'category_id' });
 
 module.exports = {
     ...models,
