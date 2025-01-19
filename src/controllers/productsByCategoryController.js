@@ -2,13 +2,16 @@ const productByCategoryService = require('../services/productsByCategoryService'
 
 const getProductsByCategory = async (req, res) => {
     const { categoryId } = req.params;
-    const { page = 1, limit = 10 } = req.query; // Lấy page và limit từ query
+    const { page = 1, limit = 10, sort, priceRange, colorIds } = req.query;
 
     try {
         const result = await productByCategoryService.getProductsByCategory(
             categoryId,
             parseInt(page, 10),
-            parseInt(limit, 10)
+            parseInt(limit, 10),
+            sort,
+            priceRange,
+            colorIds ? colorIds.split(',').map(Number) : []
         );
 
         return res.status(200).json({
@@ -28,6 +31,4 @@ const getProductsByCategory = async (req, res) => {
     }
 };
 
-module.exports = {
-    getProductsByCategory,
-};
+module.exports = { getProductsByCategory };
