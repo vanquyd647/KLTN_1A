@@ -1,10 +1,50 @@
+const { Op } = require('sequelize');
 const { Product, Category, Color, Size, ProductStock } = require('../models');
 
-const getProductsByCategory = async (categoryId, page = 1, limit = 10) => {
+const getProductsByCategory = async (categoryId, page = 1, limit = 10, sort, priceRange, colorIds) => {
     try {
-        const offset = (page - 1) * limit; // Tính toán offset dựa trên trang và giới hạn
+        const offset = (page - 1) * limit;
+
+        let order = [];
+        switch (sort) {
+            case 'featured':
+                order.push(['is_featured', 'DESC']);
+                break;
+            case 'price_asc':
+                order.push(['price', 'ASC']);
+                break;
+            case 'price_desc':
+                order.push(['price', 'DESC']);
+                break;
+            case 'name_asc':
+                order.push(['product_name', 'ASC']);
+                break;
+            case 'name_desc':
+                order.push(['product_name', 'DESC']);
+                break;
+            case 'oldest':
+                order.push(['created_at', 'ASC']);
+                break;
+            case 'newest':
+                order.push(['created_at', 'DESC']);
+                break;
+            default:
+                order.push(['created_at', 'DESC']);
+        }
+
+        let whereClause = {};
+        if (priceRange) {
+            const [minPrice, maxPrice] = priceRange.split('-').map(Number);
+            whereClause.price = { [Op.between]: [minPrice, maxPrice] };
+        }
+
+        let colorFilter = {};
+        if (colorIds?.length > 0) {
+            colorFilter = { id: { [Op.in]: colorIds } };
+        }
+
         const { count, rows } = await Product.findAndCountAll({
-            where: {}, // Nếu có điều kiện bổ sung, thêm vào đây
+            where: whereClause,
             include: [
                 {
                     model: Category,
@@ -17,6 +57,7 @@ const getProductsByCategory = async (categoryId, page = 1, limit = 10) => {
                     as: 'productColors',
                     attributes: ['id', 'color', 'hex_code'],
                     through: { attributes: ['image'] },
+                    where: colorFilter,
                 },
                 {
                     model: Size,
@@ -30,6 +71,7 @@ const getProductsByCategory = async (categoryId, page = 1, limit = 10) => {
             ],
             limit,
             offset,
+            order,
         });
 
         return {
@@ -44,6 +86,4 @@ const getProductsByCategory = async (categoryId, page = 1, limit = 10) => {
     }
 };
 
-module.exports = {
-    getProductsByCategory,
-};
+module.exports = { getProductsByCategory };
