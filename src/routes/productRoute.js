@@ -19,9 +19,11 @@ router.get('/pagination', rateLimiter, productController.getProductsByPagination
 
 // New routes
 router.get('/new', productController.getNewProductsByPagination);
+router.get('/news', productController.getNewProductsByPagination2);
 
 // Featured routes
 router.get('/featured', productController.getFeaturedProductsByPagination);
+router.get('/featureds', productController.getFeaturedProductsByPagination2);
 
 // Lấy chi tiết sản phẩm (GET /products/:slug)
 router.get('/:slug', rateLimiter, productController.getProductDetail);
