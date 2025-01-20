@@ -11,7 +11,7 @@ class TokenService {
      * @returns {Object} - Access Token và Refresh Token
      */
     static generateTokens(payload) {
-        const accessToken = jwt.sign(payload, process.env.ACCESS_TOKEN_SECRET, { expiresIn: "3600s" }); // Hết hạn sau 1 giờ
+        const accessToken = jwt.sign(payload, process.env.ACCESS_TOKEN_SECRET, { expiresIn: "3s" }); // Hết hạn sau 1 giờ
         const refreshToken = jwt.sign(payload, process.env.REFRESH_TOKEN_SECRET, { expiresIn: "7d" }); // Hết hạn sau 7 ngày
 
         return { accessToken, refreshToken };

@@ -200,26 +200,52 @@ const getProductsByPagination = async ({ page = 1, limit = 20 }) => {
 };
 
 // 2. Hàm lấy sản phẩm mới với phân trang
-const getNewProductsByPagination = async ({ page = 1, limit = 20 }) => {
+const getNewProductsByPagination = async ({ page = 1, limit = 20, sort, priceRange, colorIds }) => {
     try {
         const pageNumber = parseInt(page, 10);
         const limitNumber = parseInt(limit, 10);
         const offset = (pageNumber - 1) * limitNumber;
 
-        // Count total new products
+        // Xây dựng điều kiện sắp xếp
+        const order = [];
+        switch (sort) {
+            case 'price_asc':
+                order.push(['price', 'ASC']);
+                break;
+            case 'price_desc':
+                order.push(['price', 'DESC']);
+                break;
+            case 'newest':
+                order.push(['created_at', 'DESC']);
+                break;
+            case 'oldest':
+                order.push(['created_at', 'ASC']);
+                break;
+            default:
+                order.push(['created_at', 'DESC']);
+        }
+
+        // Bộ lọc giá
+        const whereClause = {
+            is_new: true,
+            status: { [Op.ne]: 'discontinued' },
+        };
+        if (priceRange) {
+            const [minPrice, maxPrice] = priceRange.split('-').map(Number);
+            whereClause.price = { [Op.between]: [minPrice, maxPrice] };
+        }
+
+        // Bộ lọc màu sắc
+        const colorFilter = colorIds?.length > 0 ? { id: { [Op.in]: colorIds } } : {};
+
+        // Tổng số sản phẩm mới
         const totalItems = await Product.count({
-            where: {
-                is_new: true,
-                status: { [Op.ne]: 'discontinued' },
-            },
+            where: whereClause,
         });
 
-        // Fetch paginated new products
+        // Lấy danh sách sản phẩm mới với phân trang
         const products = await Product.findAll({
-            where: {
-                is_new: true,
-                status: { [Op.ne]: 'discontinued' },
-            },
+            where: whereClause,
             include: [
                 {
                     model: Category,
@@ -232,6 +258,7 @@ const getNewProductsByPagination = async ({ page = 1, limit = 20 }) => {
                     as: 'productColors',
                     attributes: ['id', 'color', 'hex_code'],
                     through: { attributes: ['image'] },
+                    where: colorFilter,
                 },
                 {
                     model: Size,
@@ -242,6 +269,7 @@ const getNewProductsByPagination = async ({ page = 1, limit = 20 }) => {
             ],
             limit: limitNumber,
             offset,
+            order,
         });
 
         return {
@@ -259,27 +287,54 @@ const getNewProductsByPagination = async ({ page = 1, limit = 20 }) => {
     }
 };
 
+
 // 3. Hàm lấy sản phẩm nổi bật với phân trang
-const getFeaturedProductsByPagination = async ({ page = 1, limit = 20 }) => {
+const getFeaturedProductsByPagination = async ({ page = 1, limit = 20, sort, priceRange, colorIds }) => {
     try {
         const pageNumber = parseInt(page, 10);
         const limitNumber = parseInt(limit, 10);
         const offset = (pageNumber - 1) * limitNumber;
 
-        // Count total featured products
+        // Xây dựng điều kiện sắp xếp
+        const order = [];
+        switch (sort) {
+            case 'price_asc':
+                order.push(['price', 'ASC']);
+                break;
+            case 'price_desc':
+                order.push(['price', 'DESC']);
+                break;
+            case 'newest':
+                order.push(['created_at', 'DESC']);
+                break;
+            case 'oldest':
+                order.push(['created_at', 'ASC']);
+                break;
+            default:
+                order.push(['created_at', 'DESC']);
+        }
+
+        // Bộ lọc giá
+        const whereClause = {
+            is_featured: true,
+            status: { [Op.ne]: 'discontinued' },
+        };
+        if (priceRange) {
+            const [minPrice, maxPrice] = priceRange.split('-').map(Number);
+            whereClause.price = { [Op.between]: [minPrice, maxPrice] };
+        }
+
+        // Bộ lọc màu sắc
+        const colorFilter = colorIds?.length > 0 ? { id: { [Op.in]: colorIds } } : {};
+
+        // Tổng số sản phẩm nổi bật
         const totalItems = await Product.count({
-            where: {
-                is_featured: true,
-                status: { [Op.ne]: 'discontinued' },
-            },
+            where: whereClause,
         });
 
-        // Fetch paginated featured products
+        // Lấy danh sách sản phẩm nổi bật với phân trang
         const products = await Product.findAll({
-            where: {
-                is_featured: true,
-                status: { [Op.ne]: 'discontinued' },
-            },
+            where: whereClause,
             include: [
                 {
                     model: Category,
@@ -292,6 +347,7 @@ const getFeaturedProductsByPagination = async ({ page = 1, limit = 20 }) => {
                     as: 'productColors',
                     attributes: ['id', 'color', 'hex_code'],
                     through: { attributes: ['image'] },
+                    where: colorFilter,
                 },
                 {
                     model: Size,
@@ -302,6 +358,7 @@ const getFeaturedProductsByPagination = async ({ page = 1, limit = 20 }) => {
             ],
             limit: limitNumber,
             offset,
+            order,
         });
 
         return {
@@ -318,9 +375,6 @@ const getFeaturedProductsByPagination = async ({ page = 1, limit = 20 }) => {
         throw new Error('Failed to fetch featured products with pagination');
     }
 };
-
-
-
 
 // 3. Hàm lấy chi tiết sản phẩm
 const getProductDetail = async (slug) => {
@@ -423,6 +477,6 @@ module.exports = {
     updateProduct,
     deleteProduct,
     getProductsByPagination,
-    getNewProductsByPagination, 
-    getFeaturedProductsByPagination, 
+    getNewProductsByPagination,
+    getFeaturedProductsByPagination,
 };
