@@ -16,8 +16,13 @@ router.post('/user', authMiddleware, cartController.createCartForUser); // Creat
 
 // Cart management routes
 router.get('/:id', cartController.getCartById); // Get cart details by ID
+
 router.post('/:cartId/items', cartController.addItemToCart); // Add an item to a cart
+
 router.delete('/items/:itemId', cartController.removeCartItem); // Remove an item from a cart
+
 router.get('/:cartId/items', cartController.getCartItems); // Get all items in a cart
+
+router.put('/item/:itemId', cartController.updateCartItemQuantity);
 
 module.exports = router;
