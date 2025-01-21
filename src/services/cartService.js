@@ -223,6 +223,111 @@ const cartService = {
         const deletedCount = await CartItem.destroy({ where: { id: cartItemId } });
         return deletedCount > 0;
     },
+
+    async updateCartItemQuantity(cartItemId, newQuantity) {
+        try {
+            // Tìm cart item theo ID, kèm thông tin liên kết sản phẩm
+            const cartItem = await CartItem.findByPk(cartItemId, {
+                include: [
+                    {
+                        model: Product,
+                        as: 'product',
+                        attributes: ['id', 'product_name', 'slug', 'description', 'price', 'discount_price'],
+                        include: [
+                            {
+                                model: Color,
+                                as: 'productColors',
+                                attributes: ['id', 'color', 'hex_code'],
+                                through: {
+                                    attributes: ['image'], // Bao gồm trường image từ bảng ProductColor
+                                },
+                            },
+                        ],
+                    },
+                    {
+                        model: Size,
+                        as: 'size',
+                        attributes: ['id', 'size'],
+                    },
+                    {
+                        model: Color,
+                        as: 'color',
+                        attributes: ['id', 'color', 'hex_code'],
+                    },
+                    {
+                        model: ProductStock,
+                        as: 'stock',
+                        attributes: ['quantity'],
+                        where: {
+                            product_id: sequelize.col('CartItem.product_id'),
+                            size_id: sequelize.col('CartItem.size_id'),
+                            color_id: sequelize.col('CartItem.color_id'),
+                        },
+                        required: false,
+                    },
+                ],
+            });
+
+            if (!cartItem) {
+                throw new Error('Cart item not found.');
+            }
+
+            if (newQuantity <= 0) {
+                throw new Error('Quantity must be greater than 0.');
+            }
+
+            // Cập nhật số lượng trong giỏ hàng
+            await cartItem.update({ quantity: newQuantity });
+
+            // Lấy lại cart item với thông tin đầy đủ
+            const updatedCartItem = await CartItem.findByPk(cartItemId, {
+                include: [
+                    {
+                        model: Product,
+                        as: 'product',
+                        attributes: ['id', 'product_name', 'slug', 'description', 'price', 'discount_price'],
+                        include: [
+                            {
+                                model: Color,
+                                as: 'productColors',
+                                attributes: ['id', 'color', 'hex_code'],
+                                through: {
+                                    attributes: ['image'], // Bao gồm trường image từ bảng ProductColor
+                                },
+                            },
+                        ],
+                    },
+                    {
+                        model: Size,
+                        as: 'size',
+                        attributes: ['id', 'size'],
+                    },
+                    {
+                        model: Color,
+                        as: 'color',
+                        attributes: ['id', 'color', 'hex_code'],
+                    },
+                    {
+                        model: ProductStock,
+                        as: 'stock',
+                        attributes: ['quantity'],
+                        where: {
+                            product_id: sequelize.col('CartItem.product_id'),
+                            size_id: sequelize.col('CartItem.size_id'),
+                            color_id: sequelize.col('CartItem.color_id'),
+                        },
+                        required: false,
+                    },
+                ],
+            });
+
+            return updatedCartItem;
+        } catch (error) {
+            console.error('Error in updateCartItemQuantity:', error);
+            throw error;
+        }
+    }
+
 };
 
 module.exports = cartService;

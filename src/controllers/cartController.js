@@ -173,8 +173,35 @@ const cartController = {
                 data: null,
             });
         }
-    }
-    ,
+    },
+
+    async updateCartItemQuantity(req, res) {
+        try {
+            const { itemId } = req.params;
+            const { quantity } = req.body;
+
+            // Update the cart item
+            const updatedCartItem = await cartService.updateCartItemQuantity(itemId, quantity);
+
+            res.status(200).json({
+                status: 'success',
+                code: 200,
+                message: 'Cart item quantity updated successfully.',
+                data: updatedCartItem,
+            });
+        } catch (error) {
+            // Log the error for debugging
+            console.error('Error in updateCartItemQuantity controller:', error.message);
+
+            // Handle unexpected errors
+            res.status(500).json({
+                status: 'error',
+                code: 500,
+                message: error.message || 'Internal server error.',
+                data: null,
+            });
+        }
+    },
 };
 
 module.exports = cartController;
