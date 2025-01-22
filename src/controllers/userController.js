@@ -10,7 +10,7 @@ class UserController {
     // Đăng ký người dùng mới (gửi OTP và lưu tạm thông tin)
     static async register(req, res) {
         try {
-            const { firstname, lastname, email, phone, gender, password } = req.body;
+            const { firstname, lastname, email, phone, gender, password, role } = req.body;
 
             // Kiểm tra dữ liệu bắt buộc
             if (!firstname || !lastname || !email || !phone || !gender || !password) {
@@ -22,22 +22,12 @@ class UserController {
                 });
             }
 
-            // Kiểm tra xem email đã tồn tại trong bộ nhớ tạm
-            // if (userStore.has(email)) {
-            //     return res.status(400).json({
-            //         status: 'error',
-            //         code: 400,
-            //         message: 'Email này đang chờ xác thực OTP. Vui lòng đợi trước khi đăng ký lại.',
-            //         data: null
-            //     });
-            // }
-
             // Tạo OTP và lưu vào bộ nhớ tạm
             const otp = OtpService.generateOtp();
             OtpService.saveOtp(email, otp);
 
             // Lưu tạm thông tin người dùng vào bộ nhớ (chưa lưu vào DB)
-            userStore.set(email, { firstname, lastname, email, phone, gender, password });
+            userStore.set(email, { firstname, lastname, email, phone, gender, password, role });
 
             // Gửi OTP qua email
             await EmailService.sendOtpEmail(email, otp);
@@ -109,6 +99,7 @@ class UserController {
         }
     }
 
+
     // Đăng nhập người dùng
     static async login(req, res) {
         try {
@@ -140,6 +131,58 @@ class UserController {
             });
         }
     }
+
+    static async loginForAdmin(req, res) {
+        try {
+            const { email, password } = req.body;
+
+            // Xác thực người dùng
+            const user = await UserService.authenticateUser(email, password);
+
+            // Lấy danh sách vai trò của người dùng
+            const roleNames = await UserService.getUserRoles(user.id);
+
+            // Kiểm tra vai trò (chỉ cho phép admin và superadmin)
+            if (!roleNames.includes('admin') && !roleNames.includes('superadmin')) {
+                return res.status(403).json({
+                    status: 'error',
+                    code: 403,
+                    message: 'Bạn không có quyền truy cập vào hệ thống quản trị.',
+                    data: null,
+                });
+            }
+
+            // Xác định vai trò (admin hoặc superadmin)
+            const role = roleNames.includes('superadmin') ? 'superadmin' : 'admin';
+
+            // Tạo token
+            const payload = { userId: user.id, role };
+            const { accessToken, refreshToken } = TokenService.generateTokens(payload);
+
+            // Lưu refresh token vào DB
+            await TokenService.saveToken(user.id, refreshToken);
+
+            res.status(200).json({
+                status: 'success',
+                code: 200,
+                message: 'Đăng nhập quản trị thành công!',
+                data: {
+                    accessToken,
+                    refreshToken,
+                    role, // Trả về vai trò
+                },
+                user
+            });
+        } catch (error) {
+            res.status(400).json({
+                status: 'error',
+                code: 400,
+                message: error.message,
+                data: null,
+            });
+        }
+    }
+
 
     // Refresh token
     static async refreshToken(req, res) {

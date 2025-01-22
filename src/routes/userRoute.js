@@ -213,4 +213,7 @@ router.get('/profile', authMiddleware, UserController.getUserProfile);
 router.post('/refresh-token', UserController.refreshToken);
 
 
+router.post('/login-admin', UserController.loginForAdmin);
+
+
 module.exports = router; // Use the user routes for all routes starting with /api/users

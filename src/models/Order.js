@@ -23,6 +23,15 @@ module.exports = (sequelize) => {
                 key: 'id'
             }
         },
+        carrier_id: {
+            type: DataTypes.BIGINT,
+            allowNull: false,
+            references: {
+                model: 'carriers',
+                key: 'id',
+            },
+            comment: 'ID của nhà vận chuyển',
+        },
         discount_code: {
             type: DataTypes.STRING,
             allowNull: true,

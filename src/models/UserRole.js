@@ -8,15 +8,17 @@ module.exports = (sequelize) => {
     const UserRole = sequelize.define('UserRole', {
         user_id: {
             type: DataTypes.BIGINT,
+            primaryKey: true, // Đặt user_id là một phần của primary key
             references: {
-                model: User,
+                model: 'users',
                 key: 'id',
             },
         },
         role_id: {
             type: DataTypes.BIGINT,
+            primaryKey: true, // Đặt role_id là một phần của primary key
             references: {
-                model: Role,
+                model: 'roles',
                 key: 'id',
             },
         },

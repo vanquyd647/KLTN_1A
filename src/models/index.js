@@ -23,6 +23,7 @@ const defineOrderItem = require('./OrderItem');
 const definePayment = require('./Payment');
 const defineReview = require('./Review');
 const definePaymentLog = require('./PaymentLog');
+const defineCarrier = require('./Carrier');
 
 const models = {
     Product: defineProduct(sequelize),
@@ -47,6 +48,7 @@ const models = {
     Payment: definePayment(sequelize),
     Review: defineReview(sequelize),
     PaymentLog: definePaymentLog(sequelize),
+    Carrier: defineCarrier(sequelize),
 
 };
 
@@ -73,6 +75,7 @@ const {
     Payment,
     Review,
     PaymentLog,
+    Carrier,
 } = models;
 
 // Các quan hệ giữa các mô hình
@@ -189,6 +192,17 @@ ProductCategory.belongsTo(Product, { foreignKey: 'product_id' });
 ProductCategory.belongsTo(Category, { foreignKey: 'category_id' });
 Product.hasMany(ProductCategory, { foreignKey: 'product_id' });
 Category.hasMany(ProductCategory, { foreignKey: 'category_id' });
+
+Order.belongsTo(Carrier, { foreignKey: 'carrier_id' });
+Carrier.hasMany(Order, { foreignKey: 'carrier_id' });
+
+// Mối quan hệ giữa UserRole và User, Role
+UserRole.belongsTo(models.Role, { foreignKey: 'role_id', as: 'role' });
+UserRole.belongsTo(models.User, { foreignKey: 'user_id', as: 'user' });
+
+// Mối quan hệ giữa User và UserRole
+Role.hasMany(UserRole, { foreignKey: 'role_id', as: 'userRoles' });
+User.hasMany(UserRole, { foreignKey: 'user_id', as: 'userRoles' });
 
 module.exports = {
     ...models,

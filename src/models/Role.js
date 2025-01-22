@@ -11,6 +11,11 @@ module.exports = (sequelize) => {
         role_name: {
             type: DataTypes.STRING,
             allowNull: false,
+            unique: true, // Đảm bảo tên vai trò là duy nhất
+        },
+        description: {
+            type: DataTypes.STRING,
+            allowNull: true,
         },
     }, {
         tableName: 'roles',
