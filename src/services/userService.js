@@ -83,17 +83,21 @@ const assignRoleToUser = async (userId, roleId) => {
  * @returns {Array} - List of roles
  */
 const getUserRoles = async (userId) => {
-    const roles = await Role.findAll({
+    const roles = await UserRole.findAll({
+        where: { user_id: userId },
         include: [
             {
-                model: UserRole,
-                where: { user_id: userId },
+                model: Role,
+                as: 'role', // Sử dụng alias đã định nghĩa trong model
             },
         ],
     });
 
-    return roles;
+    // Trả về danh sách tên vai trò
+    return roles.map((userRole) => userRole.role.role_name);
 };
+
+
 
 module.exports = {
     createUser,

@@ -1,16 +1,18 @@
 const express = require('express');
 const router = express.Router();
 const UserController = require('../controllers/userController');
-const authMiddleware = require('../middlewares/authMiddleware');  // Optional, if authentication is needed // Import Redis client
-const rateLimiter = require('../middlewares/rateLimiter');  // Import rate limiting middleware
-const ensureSession = require('../middlewares/ensureSession'); // Import ensureSession middleware
+const authMiddleware = require('../middlewares/authMiddleware');
+const rateLimiter = require('../middlewares/rateLimiter');
+const ensureSession = require('../middlewares/ensureSession');
 
-router.use(ensureSession); // Apply ensureSession middleware to all user routes
-// Apply rate limiting to specific routes (for example, register and login)
-router.use('/register', rateLimiter);
-router.use('/login', rateLimiter);
-router.use('/verify-otp', rateLimiter);
-router.use('/profile', rateLimiter);
+router.use(ensureSession);
+
+/**
+ * @swagger
+ * tags:
+ *   name: Users
+ *   description: User management APIs
+ */
 
 /**
  * @swagger
@@ -21,13 +23,13 @@ router.use('/profile', rateLimiter);
  *       properties:
  *         id:
  *           type: integer
- *         phone:
- *           type: string
- *         email:
- *           type: string
  *         firstname:
  *           type: string
  *         lastname:
+ *           type: string
+ *         email:
+ *           type: string
+ *         phone:
  *           type: string
  *         gender:
  *           type: string
@@ -36,14 +38,12 @@ router.use('/profile', rateLimiter);
  *           format: date-time
  */
 
-
-// Đăng ký người dùng mới
 /**
  * @swagger
- * /api/users/register:
+ * /v1/api/users/register:
  *   post:
+ *     summary: Register a new user (OTP verification required)
  *     tags: [Users]
- *     summary: Register a new user
  *     requestBody:
  *       required: true
  *       content:
@@ -51,29 +51,37 @@ router.use('/profile', rateLimiter);
  *           schema:
  *             type: object
  *             required:
- *               - phone
+ *               - firstname
+ *               - lastname
  *               - email
+ *               - phone
+ *               - gender
  *               - password
  *             properties:
- *               phone:
+ *               firstname:
+ *                 type: string
+ *               lastname:
  *                 type: string
  *               email:
+ *                 type: string
+ *               phone:
+ *                 type: string
+ *               gender:
  *                 type: string
  *               password:
  *                 type: string
  *     responses:
  *       200:
- *         description: Registration successful, OTP sent
+ *         description: OTP sent for verification
  */
-router.post('/register', UserController.register);
+router.post('/register', rateLimiter, UserController.register);
 
-// Xác thực OTP và hoàn tất đăng ký
 /**
  * @swagger
- * /api/users/verify-otp:
+ * /v1/api/users/verify-otp:
  *   post:
+ *     summary: Verify OTP to complete registration
  *     tags: [Users]
- *     summary: Verify OTP for registration
  *     requestBody:
  *       required: true
  *       content:
@@ -81,26 +89,25 @@ router.post('/register', UserController.register);
  *           schema:
  *             type: object
  *             required:
- *               - phone
+ *               - email
  *               - otp
  *             properties:
- *               phone:
+ *               email:
  *                 type: string
  *               otp:
  *                 type: string
  *     responses:
- *       200:
- *         description: OTP verified successfully
+ *       201:
+ *         description: User successfully registered
  */
-router.post('/verify-otp', UserController.verifyOtp);
+router.post('/verify-otp', rateLimiter, UserController.verifyOtp);
 
-// Đăng nhập người dùng
 /**
  * @swagger
- * /api/users/login:
+ * /v1/api/users/login:
  *   post:
- *     tags: [Users]
  *     summary: User login
+ *     tags: [Users]
  *     requestBody:
  *       required: true
  *       content:
@@ -119,30 +126,70 @@ router.post('/verify-otp', UserController.verifyOtp);
  *       200:
  *         description: Login successful
  */
-router.post('/login', UserController.login);
+router.post('/login', rateLimiter, UserController.login);
 
-// Đăng xuất người dùng
 /**
  * @swagger
- * /api/users/logout:
+ * /v1/api/users/login-admin:
  *   post:
+ *     summary: Admin login
  *     tags: [Users]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - password
+ *             properties:
+ *               email:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Admin login successful
+ *       401:
+ *         description: Unauthorized access
+ */
+router.post('/login-admin', UserController.loginForAdmin);
+
+/**
+ * @swagger
+ * /v1/api/users/logout:
+ *   post:
  *     summary: User logout
+ *     tags: [Users]
  *     security:
  *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - refreshToken
+ *               - userId
+ *             properties:
+ *               refreshToken:
+ *                 type: string
+ *               userId:
+ *                 type: integer
  *     responses:
  *       200:
  *         description: Logged out successfully
  */
 router.post('/logout', authMiddleware, UserController.logout);
 
-// Lấy thông tin người dùng (cần đăng nhập)
 /**
  * @swagger
- * /api/users/profile:
+ * /v1/api/users/profile:
  *   get:
- *     tags: [Users]
  *     summary: Get user profile
+ *     tags: [Users]
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -153,16 +200,14 @@ router.post('/logout', authMiddleware, UserController.logout);
  *             schema:
  *               $ref: '#/components/schemas/User'
  */
-// Route lấy thông tin người dùng
-router.get('/profile', authMiddleware, UserController.getUserProfile);
+router.get('/profile', authMiddleware, rateLimiter, UserController.getUserProfile);
 
 /**
  * @swagger
- * /api/users/refresh-token:
+ * /v1/api/users/refresh-token:
  *   post:
+ *     summary: Refresh access token
  *     tags: [Users]
- *     summary: Refresh access token using refresh token
- *     description: Generate new access token using valid refresh token
  *     requestBody:
  *       required: true
  *       content:
@@ -182,35 +227,9 @@ router.get('/profile', authMiddleware, UserController.getUserProfile);
  *     responses:
  *       200:
  *         description: Token refreshed successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: string
- *                   example: success
- *                 code:
- *                   type: integer
- *                   example: 200
- *                 message:
- *                   type: string
- *                   example: Token refreshed successfully
- *                 data:
- *                   type: object
- *                   properties:
- *                     accessToken:
- *                       type: string
- *                     refreshToken:
- *                       type: string
  *       401:
  *         description: Invalid or expired refresh token
- *       404:
- *         description: User not found
- *       500:
- *         description: Server error
  */
 router.post('/refresh-token', UserController.refreshToken);
 
-
-module.exports = router; // Use the user routes for all routes starting with /api/users
+module.exports = router;
