@@ -40,7 +40,28 @@ app.use(cookieParser()); // Parse cookies
 app.use(rateLimiter); // Use rate-limiting middleware for anti-DDoS protection
 app.use(ensureSession); // Ensure session for all routes
 app.use(morgan('dev')); // Log requests in dev format
-app.use(helmet()); // Add security headers to responses
+app.use(
+    helmet({
+        contentSecurityPolicy: {
+            directives: {
+                defaultSrc: ["'self'"],
+                scriptSrc: ["'self'"],
+                styleSrc: ["'self'", "'unsafe-inline'"],
+                imgSrc: ["'self'", "data:"],
+                objectSrc: ["'none'"],
+                upgradeInsecureRequests: [],
+            },
+        },
+        frameguard: { action: "sameorigin" }, // X-Frame-Options
+        referrerPolicy: { policy: "no-referrer" },
+        hsts: { maxAge: 31536000, includeSubDomains: true }, // Strict-Transport-Security
+        xssFilter: false, // Helmet đã loại bỏ x-xss-protection vì nó lỗi thời
+        noSniff: true, // X-Content-Type-Options
+        ieNoOpen: true, // X-Download-Options
+        dnsPrefetchControl: { allow: false }, // X-DNS-Prefetch-Control
+    })
+);
+// Add security headers to responses
 app.use(compression()); // Compress responses for performance
 app.use(express.json()); // Parse JSON bodies in incoming requests
 app.use(cors(corsOptions)); // Enable CORS with specified options

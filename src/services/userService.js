@@ -11,18 +11,33 @@ class UserService {
      * @returns {Promise<Object>} - Created user
      */
     static async createUser(userData) {
-        const { password, ...otherData } = userData;
+        const { password, role, ...otherData } = userData;
 
-        // Hash the password before saving
+        // Hash mật khẩu trước khi lưu vào DB
         const hashedPassword = await bcrypt.hash(password, 10);
 
+        // Tìm roleId dựa trên roleName đã được lưu trong userData
+        const roleRecord = await Role.findOne({ where: { role_name: role } });
+
+        if (!roleRecord) {
+            throw new Error(`Vai trò '${role}' không hợp lệ.`);
+        }
+
+        // Tạo người dùng mới trong bảng User
         const user = await User.create({
             ...otherData,
             password: hashedPassword,
         });
 
+        // Gán vai trò cho người dùng trong bảng UserRole
+        await UserRole.create({
+            user_id: user.id,
+            role_id: roleRecord.id,
+        });
+
         return user;
     }
+
 
     /**
      * Find a user by email
@@ -66,20 +81,6 @@ class UserService {
      */
     static async getUserById(userId) {
         return await User.findByPk(userId);
-    }
-
-    /**
-     * Assign a role to a user
-     * @async
-     * @param {number} userId - ID of the user
-     * @param {number} roleId - ID of the role
-     * @returns {Promise<Object>} - Assigned UserRole
-     */
-    static async assignRoleToUser(userId, roleId) {
-        return await UserRole.create({
-            user_id: userId,
-            role_id: roleId,
-        });
     }
 
     /**

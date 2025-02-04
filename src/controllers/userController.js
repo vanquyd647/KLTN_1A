@@ -24,12 +24,15 @@ class UserController {
                 });
             }
 
+            // Đặt role mặc định là 'customer' nếu không được truyền vào
+            const userRole = role || 'customer';
+
             // Tạo OTP và lưu vào bộ nhớ tạm
             const otp = OtpService.generateOtp();
             OtpService.saveOtp(email, otp);
 
             // Lưu tạm thông tin người dùng vào bộ nhớ (chưa lưu vào DB)
-            userStore.set(email, { firstname, lastname, email, phone, gender, password, role });
+            userStore.set(email, { firstname, lastname, email, phone, gender, password, role: userRole });
 
             // Gửi OTP qua email
             await EmailService.sendOtpEmail(email, otp);
