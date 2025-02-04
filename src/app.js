@@ -59,12 +59,12 @@ app.get('/', async (req, res) => {
 });
 
 // Use the user routes for all routes starting with /api/users
-app.use('/api/users', userRoute);  // Register the user routes here
-app.use('/api/products', productRoute);  // Register the product routes here
-app.use('/api/carts', cartRoute);  // Register the cart routes here
-app.use('/api/reviews', reviewRoutes);
-app.use('/api/products-by-category', productsByCategoryRoute);
-app.use('/api/colors', colorRoutes);
+app.use('/v1/api/users', userRoute);  // Register the user routes here
+app.use('/v1/api/products', productRoute);  // Register the product routes here
+app.use('/v1/api/carts', cartRoute);  // Register the cart routes here
+app.use('/v1/api/reviews', reviewRoutes);
+app.use('/v1/api/products-by-category', productsByCategoryRoute);
+app.use('/v1/api/colors', colorRoutes);
 
 
 // Database connection check

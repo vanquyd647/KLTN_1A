@@ -119,8 +119,7 @@ class UserController {
                 status: 'success',
                 code: 200,
                 message: 'Đăng nhập thành công!',
-                data: { accessToken, refreshToken, userId: user.id },
-                user
+                data: { accessToken, refreshToken },
             });
         } catch (error) {
             res.status(400).json({
@@ -144,9 +143,9 @@ class UserController {
 
             // Kiểm tra vai trò (chỉ cho phép admin và superadmin)
             if (!roleNames.includes('admin') && !roleNames.includes('superadmin')) {
-                return res.status(403).json({
+                return res.status(401).json({
                     status: 'error',
-                    code: 403,
+                    code: 401,
                     message: 'Bạn không có quyền truy cập vào hệ thống quản trị.',
                     data: null,
                 });
@@ -171,7 +170,7 @@ class UserController {
                     refreshToken,
                     role, // Trả về vai trò
                 },
-                user
+                // user
             });
         } catch (error) {
             res.status(400).json({
