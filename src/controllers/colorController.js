@@ -1,3 +1,5 @@
+"use strict";
+
 const colorService = require('../services/colorService');
 
 const getColors = async (req, res) => {

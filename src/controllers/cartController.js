@@ -1,3 +1,5 @@
+"use strict";
+
 const cartService = require('../services/cartService'); // Adjust the path based on your project structure
 
 const cartController = {

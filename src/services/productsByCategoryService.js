@@ -1,3 +1,5 @@
+"use strict";
+
 const { Op } = require('sequelize');
 const { Product, Category, Color, Size, ProductStock } = require('../models');
 

@@ -1,3 +1,5 @@
+"use strict";
+
 /**
  * @file Email service module using Nodemailer for sending emails and OTPs.
  */

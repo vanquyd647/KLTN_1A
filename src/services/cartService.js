@@ -1,3 +1,5 @@
+"use strict";
+
 const { Cart, Product, CartItem, Size, Color, ProductStock, Category } = require('../models'); // Điều chỉnh đường dẫn theo cấu trúc dự án
 const { sequelize } = require('../models');
 const sessionService = require('./sessionService'); // Assuming sessionService is in the same directory

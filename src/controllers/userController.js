@@ -1,3 +1,5 @@
+"use strict";
+
 const UserService = require('../services/userService');
 const TokenService = require('../services/tokenService');
 const OtpService = require('../services/otpService');

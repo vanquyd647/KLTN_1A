@@ -1,3 +1,5 @@
+"use strict";
+
 const { Session } = require('../models'); // Adjust the path based on your project structure
 const { v4: uuidv4 } = require('uuid');
 

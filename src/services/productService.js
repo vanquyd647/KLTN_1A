@@ -1,3 +1,5 @@
+"use strict";
+
 const { Product, Category, Color, Size, ProductCategory, ProductColor, ProductSize, ProductStock } = require('../models');
 const { sequelize } = require('../models');  // Hoặc đường dẫn đúng đến nơi cấu hình sequelize
 const slugify = require('slugify');

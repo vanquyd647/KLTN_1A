@@ -1,3 +1,5 @@
+"use strict";
+
 const crypto = require('crypto');
 const otpStore = new Map(); // Bộ nhớ tạm để lưu OTP và trạng thái xác thực
 const moment = require('moment-timezone');

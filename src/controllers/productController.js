@@ -1,3 +1,5 @@
+"use strict";
+
 const productService = require('../services/productService');
 const redisClient = require('../configs/redisClient');
 
@@ -5,7 +7,7 @@ const redisClient = require('../configs/redisClient');
 const createProduct = async (req, res) => {
     try {
         const productData = req.body;
-        
+
         const newProduct = await productService.createProduct(productData);
         // Xóa cache Redis sau khi thêm sản phẩm mới
         await redisClient.del('products'); // Xóa cache của sản phẩm

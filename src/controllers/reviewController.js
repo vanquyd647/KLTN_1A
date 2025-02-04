@@ -1,3 +1,5 @@
+"use strict";
+
 const { createReview, getReviewsByProduct, getAverageRating, deleteReview } = require('../services/reviewService');
 
 const createReviewHandler = async (req, res) => {

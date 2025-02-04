@@ -1,3 +1,5 @@
+"use strict";
+
 /**
  * @file Provides functions to manage colors in the database.
  */

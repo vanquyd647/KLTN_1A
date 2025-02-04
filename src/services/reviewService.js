@@ -1,3 +1,5 @@
+"use strict";
+
 /**
  * Review Service - Handles CRUD operations for reviews
  */
