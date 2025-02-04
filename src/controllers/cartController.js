@@ -9,6 +9,15 @@ const cartController = {
             const { userId } = req;
             const sessionId = req.sessionId;
 
+            if (!userId) {
+                return res.status(400).json({
+                    status: 'error',
+                    code: 400,
+                    message: 'User ID is required',
+                    data: null,
+                });
+            }
+
             const cart = await cartService.createCartForUser(userId, sessionId);
             res.status(201).json({
                 status: 'success',
@@ -97,10 +106,21 @@ const cartController = {
             console.log('Request method:', req.method);
             console.log('Request params:', req.params);
             console.log('Request body:', req.body);
-            const { cartId } = req.params;
-            const cartItemData = { ...req.body, cart_id: cartId };
 
+            const { cartId } = req.params;
+
+            if (!cartId) {
+                return res.status(400).json({
+                    status: 'error',
+                    code: 400,
+                    message: 'Cart ID is required',
+                    data: null,
+                });
+            }
+
+            const cartItemData = { ...req.body, cart_id: cartId };
             const cartItem = await cartService.addItemToCart(cartItemData);
+
             res.status(201).json({
                 status: 'success',
                 code: 201,
@@ -123,6 +143,15 @@ const cartController = {
     async removeCartItem(req, res) {
         try {
             const { itemId } = req.params;
+
+            if (!itemId) {
+                return res.status(400).json({
+                    status: 'error',
+                    code: 400,
+                    message: 'Item ID is required',
+                    data: null,
+                });
+            }
 
             const success = await cartService.removeCartItem(itemId);
 

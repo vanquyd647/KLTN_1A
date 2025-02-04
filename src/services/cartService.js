@@ -6,6 +6,9 @@ const { v4: uuidv4 } = require('uuid');
 const cartService = {
 
     async createCartForUser(userId, sessionId = null) {
+        if (!userId) {
+            throw new Error('User ID is required');
+        }
         // Lấy giỏ hàng của người dùng nếu tồn tại
         let userCart = await Cart.findOne({
             where: {
