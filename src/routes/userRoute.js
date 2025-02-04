@@ -2,10 +2,6 @@ const express = require('express');
 const router = express.Router();
 const UserController = require('../controllers/userController');
 const authMiddleware = require('../middlewares/authMiddleware');
-const rateLimiter = require('../middlewares/rateLimiter');
-const ensureSession = require('../middlewares/ensureSession');
-
-router.use(ensureSession);
 
 /**
  * @swagger
@@ -74,7 +70,7 @@ router.use(ensureSession);
  *       200:
  *         description: OTP sent for verification
  */
-router.post('/register', rateLimiter, UserController.register);
+router.post('/register', UserController.register);
 
 /**
  * @swagger
@@ -100,7 +96,7 @@ router.post('/register', rateLimiter, UserController.register);
  *       201:
  *         description: User successfully registered
  */
-router.post('/verify-otp', rateLimiter, UserController.verifyOtp);
+router.post('/verify-otp', UserController.verifyOtp);
 
 /**
  * @swagger
@@ -126,7 +122,7 @@ router.post('/verify-otp', rateLimiter, UserController.verifyOtp);
  *       200:
  *         description: Login successful
  */
-router.post('/login', rateLimiter, UserController.login);
+router.post('/login', UserController.login);
 
 /**
  * @swagger
@@ -200,7 +196,7 @@ router.post('/logout', authMiddleware, UserController.logout);
  *             schema:
  *               $ref: '#/components/schemas/User'
  */
-router.get('/profile', authMiddleware, rateLimiter, UserController.getUserProfile);
+router.get('/profile', authMiddleware, UserController.getUserProfile);
 
 /**
  * @swagger

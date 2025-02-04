@@ -1,12 +1,8 @@
 const express = require('express');
 const cartController = require('../controllers/cartController');
-const ensureSession = require('../middlewares/ensureSession');
 const authMiddleware = require('../middlewares/authMiddleware');
 
 const router = express.Router();
-
-// Ensure session middleware applied to all cart routes
-router.use(ensureSession);
 
 /**
  * @swagger

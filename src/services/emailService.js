@@ -1,15 +1,26 @@
+/**
+ * @file Email service module using Nodemailer for sending emails and OTPs.
+ */
+
 const nodemailer = require('nodemailer');
 
-// Cấu hình transporter sử dụng Gmail
+/**
+ * Nodemailer transporter configuration using Gmail service.
+ * 
+ * @constant {Object} transporter
+ */
 const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
-        user: process.env.EMAIL_USER, // Đọc từ biến môi trường
-        pass: process.env.EMAIL_PASS  // Đọc từ biến môi trường
+        user: process.env.EMAIL_USER, // Read from environment variables
+        pass: process.env.EMAIL_PASS  // Read from environment variables
     }
 });
 
-// Kiểm tra kết nối transporter
+/**
+ * Verifies the connection to the email server.
+ * Logs success or error message to the console.
+ */
 transporter.verify((error, success) => {
     if (error) {
         console.error('Lỗi kết nối transporter:', error);
@@ -19,13 +30,29 @@ transporter.verify((error, success) => {
 });
 
 class EmailService {
-    // Gửi email
+    /**
+     * Sends an email.
+     * 
+     * @async
+     * @static
+     * @function sendMail
+     * @param {string} to - Recipient email address.
+     * @param {string} subject - Subject of the email.
+     * @param {string} text - Email content in plain text.
+     * @returns {Promise<boolean>} Resolves to `true` if the email is sent successfully.
+     * @throws {Error} Throws an error if email sending fails.
+     * 
+     * @example
+     * EmailService.sendMail('example@example.com', 'Test Subject', 'Hello, this is a test email.')
+     *  .then(() => console.log('Email sent successfully'))
+     *  .catch(error => console.error(error));
+     */
     static async sendMail(to, subject, text) {
         const mailOptions = {
-            from: process.env.EMAIL_USER, // Địa chỉ gửi
-            to, // Địa chỉ nhận
-            subject, // Chủ đề email
-            text // Nội dung email (plain text)
+            from: process.env.EMAIL_USER, // Sender email address
+            to, // Recipient email address
+            subject, // Email subject
+            text // Email body (plain text)
         };
 
         try {
@@ -38,7 +65,22 @@ class EmailService {
         }
     }
 
-    // Gửi OTP
+    /**
+     * Sends an OTP email to the specified recipient.
+     * 
+     * @async
+     * @static
+     * @function sendOtpEmail
+     * @param {string} email - Recipient email address.
+     * @param {string} otp - One-time password (OTP) to be sent.
+     * @returns {Promise<boolean>} Resolves to `true` if the OTP email is sent successfully.
+     * @throws {Error} Throws an error if OTP email sending fails.
+     * 
+     * @example
+     * EmailService.sendOtpEmail('example@example.com', '123456')
+     *  .then(() => console.log('OTP email sent successfully'))
+     *  .catch(error => console.error(error));
+     */
     static async sendOtpEmail(email, otp) {
         const subject = 'Mã OTP của bạn';
         const text = `Xin chào,

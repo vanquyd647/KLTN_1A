@@ -3,12 +3,39 @@ const { sequelize } = require('../models');  // Hoặc đường dẫn đúng đ
 const slugify = require('slugify');
 const { Op } = require('sequelize');
 
-// Hàm tạo slug tự động từ tên sản phẩm
-// Hàm tạo slug từ tên sản phẩm và id sản phẩm
+/**
+ * Generates a slug for a product
+ * @param {string} name - Product name
+ * @param {number} id - Product ID
+ * @returns {string} - Generated slug
+ */
 const generateSlug = (name, id) => {
     return slugify(`${name}-FS-${id}`, { lower: true, strict: true });
 };
 
+/**
+ * Creates one or multiple products with associated categories, colors, sizes, and stock information
+ * @param {Object|Object[]} productData - Product data or array of product data
+ * @param {string} productData.product_name - Name of the product
+ * @param {string} [productData.description] - Description of the product
+ * @param {number} productData.price - Price of the product
+ * @param {number} [productData.discount_price] - Discounted price (optional)
+ * @param {boolean} [productData.is_new=false] - Flag indicating if the product is new
+ * @param {boolean} [productData.is_featured=false] - Flag indicating if the product is featured
+ * @param {string} productData.status - Status of the product
+ * @param {string[]} productData.categories - List of category names
+ * @param {Object[]} productData.colors - Array of color objects
+ * @param {string} productData.colors.color - Color name
+ * @param {string} [productData.colors.hex_code] - Hex code of the color (optional)
+ * @param {string} [productData.colors.image] - Image URL of the color (optional)
+ * @param {string[]} productData.sizes - List of available sizes
+ * @param {Object[]} productData.stock - Stock information
+ * @param {string} productData.stock.size - Size of the product
+ * @param {string} productData.stock.color - Color of the product
+ * @param {number} productData.stock.quantity - Quantity available
+ * @returns {Promise<Object[]>} - Created product objects
+ * @throws {Error} - If an error occurs during product creation
+ */
 const createProduct = async (productData) => {
     const t = await sequelize.transaction();
 
@@ -105,9 +132,19 @@ const createProduct = async (productData) => {
     }
 };
 
-
-
-// Hàm lấy tất cả sản phẩm
+/**
+ * Retrieves a list of products that are not discontinued.
+ *
+ * @async
+ * @function getProducts
+ * @returns {Promise<Array>} A promise that resolves to an array of product objects.
+ * @throws {Error} If fetching products fails.
+ *
+ * @example
+ * getProducts()
+ *  .then(products => console.log(products))
+ *  .catch(error => console.error(error));
+ */
 const getProducts = async () => {
     try {
         return await Product.findAll({
@@ -141,6 +178,22 @@ const getProducts = async () => {
     }
 };
 
+/**
+ * Retrieves a paginated list of products that are not discontinued.
+ *
+ * @async
+ * @function getProductsByPagination
+ * @param {Object} options - Pagination options.
+ * @param {number} [options.page=1] - The current page number (default is 1).
+ * @param {number} [options.limit=20] - The number of products per page (default is 20).
+ * @returns {Promise<Object>} A promise that resolves to an object containing the paginated products and pagination metadata.
+ * @throws {Error} If fetching paginated products fails.
+ *
+ * @example
+ * getProductsByPagination({ page: 2, limit: 10 })
+ *  .then(data => console.log(data))
+ *  .catch(error => console.error(error));
+ */
 const getProductsByPagination = async ({ page = 1, limit = 20 }) => {
     try {
         const pageNumber = parseInt(page, 10);
@@ -199,7 +252,25 @@ const getProductsByPagination = async ({ page = 1, limit = 20 }) => {
     }
 };
 
-// 2. Hàm lấy sản phẩm mới với phân trang
+/**
+ * Retrieves a paginated list of new products with optional sorting and filtering.
+ *
+ * @async
+ * @function getNewProductsByPagination
+ * @param {Object} options - Options for pagination, sorting, and filtering.
+ * @param {number} [options.page=1] - The current page number (default is 1).
+ * @param {number} [options.limit=20] - The number of products per page (default is 20).
+ * @param {string} [options.sort] - Sorting criteria: 'price_asc', 'price_desc', 'newest', or 'oldest' (default is 'newest').
+ * @param {string} [options.priceRange] - Price range filter in the format "min-max" (e.g., "100-500").
+ * @param {Array<number>} [options.colorIds] - List of color IDs to filter by.
+ * @returns {Promise<Object>} A promise that resolves to an object containing the paginated new products and pagination metadata.
+ * @throws {Error} If fetching new products with pagination fails.
+ *
+ * @example
+ * getNewProductsByPagination({ page: 1, limit: 10, sort: 'price_asc', priceRange: '100-500', colorIds: [1, 2, 3] })
+ *  .then(data => console.log(data))
+ *  .catch(error => console.error(error));
+ */
 const getNewProductsByPagination = async ({ page = 1, limit = 20, sort, priceRange, colorIds }) => {
     try {
         const pageNumber = parseInt(page, 10);
@@ -288,7 +359,25 @@ const getNewProductsByPagination = async ({ page = 1, limit = 20, sort, priceRan
 };
 
 
-// 3. Hàm lấy sản phẩm nổi bật với phân trang
+/**
+ * Retrieves a paginated list of featured products with optional sorting and filtering.
+ *
+ * @async
+ * @function getFeaturedProductsByPagination
+ * @param {Object} options - Options for pagination, sorting, and filtering.
+ * @param {number} [options.page=1] - The current page number (default is 1).
+ * @param {number} [options.limit=20] - The number of products per page (default is 20).
+ * @param {string} [options.sort] - Sorting criteria: 'price_asc', 'price_desc', 'newest', or 'oldest' (default is 'newest').
+ * @param {string} [options.priceRange] - Price range filter in the format "min-max" (e.g., "100-500").
+ * @param {Array<number>} [options.colorIds] - List of color IDs to filter by.
+ * @returns {Promise<Object>} A promise that resolves to an object containing the paginated featured products and pagination metadata.
+ * @throws {Error} If fetching featured products with pagination fails.
+ *
+ * @example
+ * getFeaturedProductsByPagination({ page: 1, limit: 10, sort: 'price_asc', priceRange: '100-500', colorIds: [1, 2, 3] })
+ *  .then(data => console.log(data))
+ *  .catch(error => console.error(error));
+ */
 const getFeaturedProductsByPagination = async ({ page = 1, limit = 20, sort, priceRange, colorIds }) => {
     try {
         const pageNumber = parseInt(page, 10);
@@ -376,6 +465,25 @@ const getFeaturedProductsByPagination = async ({ page = 1, limit = 20, sort, pri
     }
 };
 
+/**
+ * Retrieves a paginated list of new products with optional sorting and filtering.
+ *
+ * @async
+ * @function getNewProductsByPagination
+ * @param {Object} options - Options for pagination, sorting, and filtering.
+ * @param {number} [options.page=1] - The current page number (default is 1).
+ * @param {number} [options.limit=20] - The number of products per page (default is 20).
+ * @param {string} [options.sort] - Sorting criteria: 'price_asc', 'price_desc', 'newest', or 'oldest' (default is 'newest').
+ * @param {string} [options.priceRange] - Price range filter in the format "min-max" (e.g., "100-500").
+ * @param {Array<number>} [options.colorIds] - List of color IDs to filter by.
+ * @returns {Promise<Object>} A promise that resolves to an object containing the paginated new products and pagination metadata.
+ * @throws {Error} If fetching new products with pagination fails.
+ *
+ * @example
+ * getNewProductsByPagination({ page: 1, limit: 10, sort: 'price_asc', priceRange: '100-500', colorIds: [1, 2, 3] })
+ *  .then(data => console.log(data))
+ *  .catch(error => console.error(error));
+ */
 const getNewProductsByPagination2 = async ({ page = 1, limit = 20 }) => {
     try {
         const pageNumber = parseInt(page, 10);
@@ -435,7 +543,25 @@ const getNewProductsByPagination2 = async ({ page = 1, limit = 20 }) => {
     }
 };
 
-// 3. Hàm lấy sản phẩm nổi bật với phân trang
+/**
+ * Retrieves a paginated list of featured products with optional sorting and filtering.
+ *
+ * @async
+ * @function getFeaturedProductsByPagination
+ * @param {Object} options - Options for pagination, sorting, and filtering.
+ * @param {number} [options.page=1] - The current page number (default is 1).
+ * @param {number} [options.limit=20] - The number of products per page (default is 20).
+ * @param {string} [options.sort] - Sorting criteria: 'price_asc', 'price_desc', 'newest', or 'oldest' (default is 'newest').
+ * @param {string} [options.priceRange] - Price range filter in the format "min-max" (e.g., "100-500").
+ * @param {Array<number>} [options.colorIds] - List of color IDs to filter by.
+ * @returns {Promise<Object>} A promise that resolves to an object containing the paginated featured products and pagination metadata.
+ * @throws {Error} If fetching featured products with pagination fails.
+ *
+ * @example
+ * getFeaturedProductsByPagination({ page: 1, limit: 10, sort: 'price_asc', priceRange: '100-500', colorIds: [1, 2, 3] })
+ *  .then(data => console.log(data))
+ *  .catch(error => console.error(error));
+ */
 const getFeaturedProductsByPagination2 = async ({ page = 1, limit = 20 }) => {
     try {
         const pageNumber = parseInt(page, 10);
@@ -495,7 +621,20 @@ const getFeaturedProductsByPagination2 = async ({ page = 1, limit = 20 }) => {
     }
 };
 
-// 3. Hàm lấy chi tiết sản phẩm
+/**
+ * Retrieves the details of a specific product by its slug.
+ *
+ * @async
+ * @function getProductDetail
+ * @param {string} slug - The unique slug of the product.
+ * @returns {Promise<Object>} A promise that resolves to the product details, including related categories, colors, sizes, and stock information.
+ * @throws {Error} If the product does not exist or if there is an error during the query.
+ *
+ * @example
+ * getProductDetail('example-product-slug')
+ *  .then(product => console.log(product))
+ *  .catch(error => console.error(error));
+ */
 const getProductDetail = async (slug) => {
     try {
         const product = await Product.findOne({
@@ -532,7 +671,33 @@ const getProductDetail = async (slug) => {
     }
 };
 
-// 4. Hàm cập nhật sản phẩm
+/**
+ * Updates the details of a product identified by its slug.
+ *
+ * @async
+ * @function updateProduct
+ * @param {string} slug - The unique slug of the product to update.
+ * @param {Object} productData - The updated product data.
+ * @param {string} [productData.product_name] - The updated product name.
+ * @param {string} [productData.description] - The updated product description.
+ * @param {number} [productData.price] - The updated product price.
+ * @param {number} [productData.discount_price] - The updated discount price.
+ * @param {boolean} [productData.is_featured] - Whether the product is featured.
+ * @param {string} [productData.status] - The updated status of the product.
+ * @returns {Promise<Object>} A promise that resolves to the updated product object.
+ * @throws {Error} If the product does not exist or if the update process fails.
+ *
+ * @example
+ * updateProduct('example-slug', {
+ *   product_name: 'Updated Product Name',
+ *   price: 150.00,
+ *   discount_price: 120.00,
+ *   is_featured: true,
+ *   status: 'active'
+ * })
+ * .then(updatedProduct => console.log(updatedProduct))
+ * .catch(error => console.error(error));
+ */
 const updateProduct = async (slug, productData) => {
     const t = await sequelize.transaction();
 
@@ -562,7 +727,20 @@ const updateProduct = async (slug, productData) => {
     }
 };
 
-// 5. Hàm xóa sản phẩm
+/**
+ * Deletes a product identified by its slug, along with its related associations.
+ *
+ * @async
+ * @function deleteProduct
+ * @param {string} slug - The unique slug of the product to delete.
+ * @returns {Promise<Object>} A promise that resolves to a success message when the product is deleted.
+ * @throws {Error} If the product does not exist or if the deletion process fails.
+ *
+ * @example
+ * deleteProduct('example-slug')
+ *  .then(response => console.log(response))
+ *  .catch(error => console.error(error));
+ */
 const deleteProduct = async (slug) => {
     const t = await sequelize.transaction();
 

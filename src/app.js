@@ -14,6 +14,7 @@ const { sequelize, Product, Color, Size, ProductStock, ProductImage, ProductSize
 const { updateIsNewStatus } = require('../src/script/updateIsNewStatus');
 const redisClient = require('./configs/redisClient');  // Import Redis client
 const rateLimiter = require('./middlewares/rateLimiter'); // Import rate limiting middleware
+const ensureSession = require('./middlewares/ensureSession');
 const userRoute = require('./routes/userRoute'); // Import user routes
 const productRoute = require('./routes/productRoute'); // Import product routes
 const cartRoute = require('./routes/cartRoute'); // Import cart routes
@@ -31,19 +32,20 @@ const corsOptions = {
     exposedHeaders: ['x-session-id'], // Các header được "phơi bày" cho client
 };
 
-
+// Use Swagger UI for API documentation
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-app.use(cookieParser()); // Parse cookies
 // Init middleware
+app.use(cookieParser()); // Parse cookies
 app.use(rateLimiter); // Use rate-limiting middleware for anti-DDoS protection
+app.use(ensureSession); // Ensure session for all routes
 app.use(morgan('dev')); // Log requests in dev format
 app.use(helmet()); // Add security headers to responses
 app.use(compression()); // Compress responses for performance
 app.use(express.json()); // Parse JSON bodies in incoming requests
 app.use(cors(corsOptions)); // Enable CORS with specified options
 
-// Test Redis
+// Test API endpoint
 app.get('/', async (req, res) => {
     try {
         // Save a message into Redis
@@ -85,7 +87,7 @@ sequelize.sync({ force: false })  // Use `force: false` to avoid data loss
         console.error('Error syncing the database:', err);
     });
 
-// Thiết lập cron job chạy lúc 2:00 AM mỗi ngày
+// Schedule a cron job to update is_new status of products every day at 2:00 AM
 cron.schedule('0 2 * * *', () => {
     console.log('Running is_new update cron job...');
     updateIsNewStatus();

@@ -1,10 +1,8 @@
 const express = require('express');
 const productController = require('../controllers/productController');
 const rateLimiter = require('../middlewares/rateLimiter');
-const ensureSession = require('../middlewares/ensureSession');
 
 const router = express.Router();
-router.use(ensureSession);
 
 /**
  * @swagger

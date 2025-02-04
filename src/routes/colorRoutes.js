@@ -1,9 +1,7 @@
 const express = require('express');
-const router = express.Router();
-const ensureSession = require('../middlewares/ensureSession');
 const colorController = require('../controllers/colorController');
 
-router.use(ensureSession);
+const router = express.Router();
 
 /**
  * @swagger

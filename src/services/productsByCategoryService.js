@@ -1,6 +1,25 @@
 const { Op } = require('sequelize');
 const { Product, Category, Color, Size, ProductStock } = require('../models');
 
+/**
+ * Retrieves a paginated list of products filtered by category with optional sorting and filtering.
+ *
+ * @async
+ * @function getProductsByCategory
+ * @param {number} categoryId - The ID of the category to filter products by.
+ * @param {number} [page=1] - The current page number (default is 1).
+ * @param {number} [limit=10] - The number of products per page (default is 10).
+ * @param {string} [sort] - Sorting criteria: 'featured', 'price_asc', 'price_desc', 'name_asc', 'name_desc', 'oldest', or 'newest' (default is 'newest').
+ * @param {string} [priceRange] - Price range filter in the format "min-max" (e.g., "100-500").
+ * @param {Array<number>} [colorIds] - List of color IDs to filter by.
+ * @returns {Promise<Object>} A promise that resolves to an object containing the paginated products, total count, and pagination metadata.
+ * @throws {Error} If fetching products by category fails.
+ *
+ * @example
+ * getProductsByCategory(5, 1, 10, 'price_asc', '100-500', [1, 2, 3])
+ *  .then(data => console.log(data))
+ *  .catch(error => console.error(error));
+ */
 const getProductsByCategory = async (categoryId, page = 1, limit = 10, sort, priceRange, colorIds) => {
     try {
         const offset = (page - 1) * limit;

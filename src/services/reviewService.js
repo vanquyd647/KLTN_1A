@@ -1,7 +1,19 @@
+/**
+ * Review Service - Handles CRUD operations for reviews
+ */
 const { Op } = require('sequelize');
-const { Review, Product, User } = require('../models'); // Đảm bảo đường dẫn chính xác
+const { Review, Product, User } = require('../models'); // Ensure correct path
 
-// Tạo một review mới
+/**
+ * Creates a new review
+ * @param {Object} reviewData - Data for the new review
+ * @param {number} reviewData.productId - ID of the product being reviewed
+ * @param {number} reviewData.userId - ID of the user writing the review
+ * @param {number} reviewData.rating - Rating given to the product
+ * @param {string} reviewData.reviewText - Review text content
+ * @returns {Promise<Object>} - The created review object
+ * @throws {Error} - If review creation fails
+ */
 async function createReview({ productId, userId, rating, reviewText }) {
     try {
         const newReview = await Review.create({
@@ -17,7 +29,14 @@ async function createReview({ productId, userId, rating, reviewText }) {
     }
 }
 
-// Lấy danh sách review của một sản phẩm (có phân trang)
+/**
+ * Retrieves a paginated list of reviews for a product
+ * @param {number} productId - ID of the product
+ * @param {number} [limit=5] - Number of reviews per page
+ * @param {number} [offset=0] - Offset for pagination
+ * @returns {Promise<Object>} - Object containing reviews, total count, and pagination info
+ * @throws {Error} - If retrieval fails
+ */
 async function getReviewsByProduct(productId, limit = 5, offset = 0) {
     try {
         const { count, rows } = await Review.findAndCountAll({
@@ -25,10 +44,10 @@ async function getReviewsByProduct(productId, limit = 5, offset = 0) {
             include: [
                 {
                     model: User,
-                    attributes: ['id', 'firstname', 'lastname'], // Lấy thông tin cơ bản của User
+                    attributes: ['id', 'firstname', 'lastname'], // Get user details
                 },
             ],
-            order: [['created_at', 'DESC']], // Sắp xếp theo thời gian mới nhất
+            order: [['created_at', 'DESC']], // Sort by newest first
             limit,
             offset,
         });
@@ -53,7 +72,12 @@ async function getReviewsByProduct(productId, limit = 5, offset = 0) {
     }
 }
 
-// Tính điểm trung bình của một sản phẩm
+/**
+ * Calculates the average rating of a product
+ * @param {number} productId - ID of the product
+ * @returns {Promise<Object>} - Object containing average rating and total reviews
+ * @throws {Error} - If calculation fails
+ */
 async function getAverageRating(productId) {
     try {
         const result = await Review.findOne({
@@ -73,20 +97,30 @@ async function getAverageRating(productId) {
     }
 }
 
-// Xóa một review
+/**
+ * Deletes a review
+ * @param {number} reviewId - ID of the review to delete
+ * @returns {Promise<boolean>} - True if deletion was successful, otherwise false
+ * @throws {Error} - If deletion fails
+ */
 async function deleteReview(reviewId) {
     try {
         const result = await Review.destroy({
             where: { id: reviewId },
         });
-        return result > 0; // Trả về true nếu xóa thành công
+        return result > 0; // Returns true if successful
     } catch (error) {
         console.error('Error deleting review:', error);
         throw new Error('Could not delete review');
     }
 }
 
-// Lấy danh sách review của một người dùng
+/**
+ * Retrieves all reviews by a specific user
+ * @param {number} userId - ID of the user
+ * @returns {Promise<Object[]>} - Array of reviews written by the user
+ * @throws {Error} - If retrieval fails
+ */
 async function getReviewsByUser(userId) {
     try {
         const reviews = await Review.findAll({
@@ -94,10 +128,10 @@ async function getReviewsByUser(userId) {
             include: [
                 {
                     model: Product,
-                    attributes: ['id', 'product_name'], // Lấy thông tin cơ bản của sản phẩm
+                    attributes: ['id', 'product_name'], // Get product details
                 },
             ],
-            order: [['created_at', 'DESC']], // Sắp xếp theo thời gian mới nhất
+            order: [['created_at', 'DESC']], // Sort by newest first
         });
 
         return reviews.map(review => ({
@@ -113,7 +147,7 @@ async function getReviewsByUser(userId) {
     }
 }
 
-// Export các hàm để sử dụng
+// Export functions
 module.exports = {
     createReview,
     getReviewsByProduct,

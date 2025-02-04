@@ -103,7 +103,7 @@ module.exports = {
     createUser,
     findUserByEmail,
     authenticateUser,
-    getUserById,  // Added this method
+    getUserById,  
     assignRoleToUser,
     getUserRoles,
 };
