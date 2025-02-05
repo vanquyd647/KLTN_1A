@@ -3,14 +3,14 @@
 const { User, UserRole, Role } = require('../models'); // Import models
 const bcrypt = require('bcrypt');
 
-class UserService {
+const userService = {
     /**
      * Create a new user
      * @async
      * @param {Object} userData - Data for the new user
      * @returns {Promise<Object>} - Created user
      */
-    static async createUser(userData) {
+    async createUser(userData) {
         const { password, role, ...otherData } = userData;
 
         // Hash mật khẩu trước khi lưu vào DB
@@ -36,8 +36,7 @@ class UserService {
         });
 
         return user;
-    }
-
+    },
 
     /**
      * Find a user by email
@@ -45,9 +44,9 @@ class UserService {
      * @param {string} email - Email of the user
      * @returns {Promise<Object|null>} - User object or null if not found
      */
-    static async findUserByEmail(email) {
+    async findUserByEmail(email) {
         return await User.findOne({ where: { email } });
-    }
+    },
 
     /**
      * Authenticate user by email and password
@@ -57,7 +56,7 @@ class UserService {
      * @returns {Promise<Object|null>} - User object or null if authentication fails
      * @throws {Error} If authentication fails
      */
-    static async authenticateUser(email, password) {
+    async authenticateUser(email, password) {
         const user = await User.findOne({ where: { email } });
 
         if (!user) {
@@ -71,7 +70,7 @@ class UserService {
         }
 
         return user;
-    }
+    },
 
     /**
      * Get user by ID
@@ -79,9 +78,9 @@ class UserService {
      * @param {number} userId - ID of the user
      * @returns {Promise<Object|null>} - User object or null if not found
      */
-    static async getUserById(userId) {
+    async getUserById(userId) {
         return await User.findByPk(userId);
-    }
+    },
 
     /**
      * Get roles for a user
@@ -89,7 +88,7 @@ class UserService {
      * @param {number} userId - ID of the user
      * @returns {Promise<Array<string>>} - List of role names
      */
-    static async getUserRoles(userId) {
+    async getUserRoles(userId) {
         const roles = await UserRole.findAll({
             where: { user_id: userId },
             include: [
@@ -103,6 +102,7 @@ class UserService {
         // Return the list of role names
         return roles.map((userRole) => userRole.role.role_name);
     }
-}
+};
 
-module.exports = UserService;
+// Export all functions inside an object
+module.exports = userService;

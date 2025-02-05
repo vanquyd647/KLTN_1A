@@ -31,12 +31,11 @@ transporter.verify((error, success) => {
     }
 });
 
-class EmailService {
+const emailService = {
     /**
      * Sends an email.
      * 
      * @async
-     * @static
      * @function sendMail
      * @param {string} to - Recipient email address.
      * @param {string} subject - Subject of the email.
@@ -45,11 +44,11 @@ class EmailService {
      * @throws {Error} Throws an error if email sending fails.
      * 
      * @example
-     * EmailService.sendMail('example@example.com', 'Test Subject', 'Hello, this is a test email.')
+     * emailService.sendMail('example@example.com', 'Test Subject', 'Hello, this is a test email.')
      *  .then(() => console.log('Email sent successfully'))
      *  .catch(error => console.error(error));
      */
-    static async sendMail(to, subject, text) {
+    async sendMail(to, subject, text) {
         const mailOptions = {
             from: process.env.EMAIL_USER, // Sender email address
             to, // Recipient email address
@@ -65,13 +64,12 @@ class EmailService {
             console.error('Lỗi khi gửi email:', error);
             throw new Error('Không thể gửi email');
         }
-    }
+    },
 
     /**
      * Sends an OTP email to the specified recipient.
      * 
      * @async
-     * @static
      * @function sendOtpEmail
      * @param {string} email - Recipient email address.
      * @param {string} otp - One-time password (OTP) to be sent.
@@ -79,11 +77,11 @@ class EmailService {
      * @throws {Error} Throws an error if OTP email sending fails.
      * 
      * @example
-     * EmailService.sendOtpEmail('example@example.com', '123456')
+     * emailService.sendOtpEmail('example@example.com', '123456')
      *  .then(() => console.log('OTP email sent successfully'))
      *  .catch(error => console.error(error));
      */
-    static async sendOtpEmail(email, otp) {
+    async sendOtpEmail(email, otp) {
         const subject = 'Mã OTP của bạn';
         const text = `Xin chào,
 
@@ -96,6 +94,7 @@ Trân trọng,
 
         return this.sendMail(email, subject, text);
     }
-}
+};
 
-module.exports = EmailService;
+// Export all functions inside an object
+module.exports = emailService;
