@@ -1,6 +1,5 @@
 const express = require('express');
-const productsByCategoryController = require('../controllers/productsByCategoryController');
-
+const {getProductsByCategory} = require('../controllers/productsByCategoryController');
 const router = express.Router();
 
 /**
@@ -89,6 +88,6 @@ const router = express.Router();
  *       500:
  *         description: Internal server error
  */
-router.get('/:categoryId', productsByCategoryController.getProductsByCategory);
+router.get('/:categoryId', getProductsByCategory);
 
 module.exports = router;

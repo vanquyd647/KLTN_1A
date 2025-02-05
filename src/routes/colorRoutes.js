@@ -1,5 +1,5 @@
 const express = require('express');
-const colorController = require('../controllers/colorController');
+const { getColors } = require('../controllers/colorController');
 
 const router = express.Router();
 
@@ -45,6 +45,6 @@ const router = express.Router();
  *       500:
  *         description: Internal server error
  */
-router.get('/', colorController.getColors);
+router.get('/', getColors);
 
 module.exports = router;

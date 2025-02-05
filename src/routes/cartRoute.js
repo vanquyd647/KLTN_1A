@@ -1,5 +1,5 @@
 const express = require('express');
-const cartController = require('../controllers/cartController');
+const {createCartForGuest, createCartForUser, getCartById, addItemToCart, removeCartItem, getCartItems, updateCartItemQuantity} = require('../controllers/cartController');
 const authMiddleware = require('../middlewares/authMiddleware');
 
 const router = express.Router();
@@ -23,7 +23,7 @@ const router = express.Router();
  *       500:
  *         description: Internal server error
  */
-router.post('/guest', cartController.createCartForGuest);
+router.post('/guest', createCartForGuest);
 
 /**
  * @swagger
@@ -39,7 +39,7 @@ router.post('/guest', cartController.createCartForGuest);
  *       500:
  *         description: Internal server error
  */
-router.post('/user', authMiddleware, cartController.createCartForUser);
+router.post('/user', authMiddleware, createCartForUser);
 
 /**
  * @swagger
@@ -62,7 +62,7 @@ router.post('/user', authMiddleware, cartController.createCartForUser);
  *       500:
  *         description: Internal server error
  */
-router.get('/:id', cartController.getCartById);
+router.get('/:id', getCartById);
 
 /**
  * @swagger
@@ -94,7 +94,7 @@ router.get('/:id', cartController.getCartById);
  *       500:
  *         description: Internal server error
  */
-router.post('/:cartId/items', cartController.addItemToCart);
+router.post('/:cartId/items', addItemToCart);
 
 /**
  * @swagger
@@ -117,7 +117,7 @@ router.post('/:cartId/items', cartController.addItemToCart);
  *       500:
  *         description: Internal server error
  */
-router.delete('/items/:itemId', cartController.removeCartItem);
+router.delete('/items/:itemId', removeCartItem);
 
 /**
  * @swagger
@@ -138,7 +138,7 @@ router.delete('/items/:itemId', cartController.removeCartItem);
  *       500:
  *         description: Internal server error
  */
-router.get('/:cartId/items', cartController.getCartItems);
+router.get('/:cartId/items', getCartItems);
 
 /**
  * @swagger
@@ -176,6 +176,6 @@ router.get('/:cartId/items', cartController.getCartItems);
  *       500:
  *         description: Internal server error
  */
-router.put('/item/:itemId', cartController.updateCartItemQuantity);
+router.put('/item/:itemId', updateCartItemQuantity);
 
 module.exports = router;
