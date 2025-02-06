@@ -19,11 +19,13 @@ const defineSession = require('./Session');
 const defineCart = require('./Cart');
 const defineCartItem = require('./CartItem');
 const defineOrder = require('./Order');
+const defineOrderDetail = require('./OrderDetails');
 const defineOrderItem = require('./OrderItem');
 const definePayment = require('./Payment');
 const defineReview = require('./Review');
 const definePaymentLog = require('./PaymentLog');
 const defineCarrier = require('./Carrier');
+
 
 const models = {
     Product: defineProduct(sequelize),
@@ -44,6 +46,7 @@ const models = {
     Cart: defineCart(sequelize),
     CartItem: defineCartItem(sequelize),
     Order: defineOrder(sequelize),
+    OrderDetails: defineOrderDetail(sequelize),
     OrderItem: defineOrderItem(sequelize),
     Payment: definePayment(sequelize),
     Review: defineReview(sequelize),
@@ -71,6 +74,7 @@ const {
     Cart,
     CartItem,
     Order,
+    OrderDetails,
     OrderItem,
     Payment,
     Review,
@@ -138,6 +142,9 @@ Order.belongsTo(User, { foreignKey: 'user_id' });
 
 Order.hasMany(OrderItem, { foreignKey: 'order_id' });
 OrderItem.belongsTo(Order, { foreignKey: 'order_id' });
+
+Order.hasOne(OrderDetails, { foreignKey: 'order_id' });
+OrderDetails.belongsTo(Order, { foreignKey: 'order_id' });
 
 Product.hasMany(OrderItem, { foreignKey: 'product_id' });
 OrderItem.belongsTo(Product, { foreignKey: 'product_id' });

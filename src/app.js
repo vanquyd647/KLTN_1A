@@ -21,6 +21,7 @@ const cartRoute = require('./routes/cartRoute'); // Import cart routes
 const reviewRoutes = require('./routes/reviewRoutes');
 const productsByCategoryRoute = require('./routes/productsByCategoryRoute');
 const colorRoutes = require('./routes/colorRoutes');
+const oderRoute = require('./routes/orderRoute');
 
 
 const app = express();
@@ -88,6 +89,7 @@ app.use('/v1/api/carts', cartRoute);  // Register the cart routes here
 app.use('/v1/api/reviews', reviewRoutes);
 app.use('/v1/api/products-by-category', productsByCategoryRoute);
 app.use('/v1/api/colors', colorRoutes);
+app.use('/v1/api/orders', oderRoute);
 
 
 // Database connection check

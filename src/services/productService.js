@@ -14,7 +14,7 @@ const productService = {
      * @param {number} id - Product ID
      * @returns {string} - Generated slug
      */
-    async generateSlug(name, id) {
+    generateSlug(name, id) {
         return slugify(`${name}-FS-${id}`, { lower: true, strict: true });
     },
 
@@ -63,7 +63,7 @@ const productService = {
                 }, { transaction: t });
 
                 // 2. Tạo slug bằng cách kết hợp product_name và product_id
-                const slug = generateSlug(data.product_name, newProduct.id);
+                const slug = this.generateSlug(data.product_name, newProduct.id);
 
                 // 3. Cập nhật lại slug cho sản phẩm
                 await newProduct.update({ slug }, { transaction: t });

@@ -9,19 +9,12 @@ module.exports = (sequelize) => {
         },
         user_id: {
             type: DataTypes.BIGINT,
-            allowNull: false,
+            allowNull: true,
             references: {
-                model: 'users', // Tên bảng User
+                model: 'users',
                 key: 'id'
-            }
-        },
-        address_id: {
-            type: DataTypes.BIGINT,
-            allowNull: false,
-            references: {
-                model: 'addresses', // Bảng Address
-                key: 'id'
-            }
+            },
+            comment: 'ID của người dùng nếu đăng nhập'
         },
         carrier_id: {
             type: DataTypes.BIGINT,
@@ -30,15 +23,17 @@ module.exports = (sequelize) => {
                 model: 'carriers',
                 key: 'id',
             },
-            comment: 'ID của nhà vận chuyển',
+            comment: 'ID của nhà vận chuyển'
         },
         discount_code: {
             type: DataTypes.STRING,
             allowNull: true,
+            comment: 'Mã giảm giá nếu có'
         },
         discount_amount: {
             type: DataTypes.DECIMAL(10, 2),
             defaultValue: 0.00,
+            comment: 'Số tiền giảm giá áp dụng'
         },
         original_price: {
             type: DataTypes.DECIMAL(10, 2),
@@ -55,6 +50,12 @@ module.exports = (sequelize) => {
             allowNull: false,
             comment: 'Giá cuối cùng phải thanh toán'
         },
+        payment_method: {
+            type: DataTypes.ENUM('cod', 'credit_card', 'paypal', 'bank_transfer'),
+            allowNull: false,
+            defaultValue: 'cod',
+            comment: 'Phương thức thanh toán'
+        },
         status: {
             type: DataTypes.ENUM('pending', 'completed', 'canceled', 'failed', 'in_payment', 'in_progress'),
             allowNull: false,
@@ -62,7 +63,7 @@ module.exports = (sequelize) => {
         },
         expires_at: {
             type: DataTypes.DATE,
-            allowNull: true, // Thời gian hết hạn khi đơn hàng ở trạng thái `in_payment`
+            allowNull: true, 
         },
         created_at: {
             type: DataTypes.DATE,
@@ -70,7 +71,8 @@ module.exports = (sequelize) => {
         },
         updated_at: {
             type: DataTypes.DATE,
-            defaultValue: DataTypes.NOW
+            defaultValue: DataTypes.NOW,
+            onUpdate: DataTypes.NOW
         }
     }, {
         tableName: 'orders',
