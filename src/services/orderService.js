@@ -1,63 +1,100 @@
-const redisClient = require('../configs/redisClient'); // Kết nối Redis
+const { Queue } = require('bullmq');
+const { createClient } = require('redis');
 const { sequelize } = require('../models');
 const Order = require('../models/Order')(sequelize);
 const OrderDetail = require('../models/OrderDetails')(sequelize);
 const OrderItem = require('../models/OrderItem')(sequelize);
 const ProductStock = require('../models/ProductStock')(sequelize);
 const { Op } = require('sequelize');
+require('dotenv').config();
+
+// 🔥 Kết nối Redis
+const redisQueueClient = createClient({
+    url: process.env.REDIS_URL2,
+    password: process.env.REDIS_PASSWORD2
+});
+
+redisQueueClient.on('connect', () => console.log('✅ Kết nối Redis Queue thành công!'));
+redisQueueClient.on('error', (err) => console.error('❌ Lỗi Redis Queue:', err));
+
+(async () => {
+    try {
+        await redisQueueClient.connect();
+    } catch (error) {
+        console.error('❌ Không thể kết nối Redis Queue:', error);
+    }
+})();
+
+// 🔥 Khởi tạo hàng đợi đơn hàng
+const orderQueue = new Queue('orderQueue', {
+    connection: {
+        host: process.env.REDIS_URL2.split('//')[1].split(':')[0],
+        port: process.env.REDIS_URL2.split(':')[2] || 6379,
+        password: process.env.REDIS_PASSWORD2
+    }
+});
 
 const OrderService = {
+    // 📌 Thêm đơn hàng vào hàng đợi
     createOrder: async (orderData) => {
+        console.log("📥 Dữ liệu trước khi đưa vào hàng đợi:", JSON.stringify(orderData, null, 2));
+
+        if (!orderData.carrier_id || !orderData.original_price ||
+            !orderData.discounted_price || !orderData.final_price || !orderData.items) {
+            console.error("❌ Lỗi: Dữ liệu đơn hàng bị thiếu khi thêm vào hàng đợi:", JSON.stringify(orderData, null, 2));
+            throw new Error("Thiếu thông tin quan trọng trong đơn hàng!");
+        }
+
+        const job = await orderQueue.add('processOrder', orderData, {
+            removeOnComplete: true,
+            attempts: 3
+        });
+
+        return job.id;
+    },
+
+    // 📌 Lấy kết quả xử lý đơn hàng từ Redis (do Worker lưu)
+    getOrderResult: async (jobId) => {
+        const result = await redisQueueClient.get(`orderResult:${jobId}`);
+        return result ? JSON.parse(result) : null;
+    },
+
+    // 📌 Xử lý đơn hàng (chạy trong Worker)
+    processOrder: async (orderData) => {
         const t = await sequelize.transaction();
         try {
             const productIds = orderData.items.map(item => item.product_id);
             const sizeIds = orderData.items.map(item => item.size_id);
             const colorIds = orderData.items.map(item => item.color_id);
 
-            // 🔥 Luôn cập nhật stock từ Database lên Redis
+            // 🔥 Kiểm tra tồn kho thực tế từ MySQL trước khi xử lý đơn hàng
             const stockData = await ProductStock.findAll({
                 where: {
                     product_id: { [Op.in]: productIds },
                     size_id: { [Op.in]: sizeIds },
                     color_id: { [Op.in]: colorIds }
-                }
+                },
+                transaction: t
             });
 
+            // 🔥 Xây dựng stockMap từ MySQL
             const stockMap = {};
             for (const stock of stockData) {
-                const key = `stock:${stock.product_id}:${stock.size_id}:${stock.color_id}`;
+                const key = `${stock.product_id}-${stock.size_id}-${stock.color_id}`;
                 stockMap[key] = stock.quantity;
-                await redisClient.set(key, stock.quantity);
             }
 
-            // 🔥 Kiểm tra tồn kho và giữ hàng bằng Redis Transaction
+            // 🔥 Kiểm tra số lượng tồn kho thực tế trước khi xử lý đơn hàng
             for (const item of orderData.items) {
-                const key = `stock:${item.product_id}:${item.size_id}:${item.color_id}`;
-                
-                let success = false;
-                while (!success) {
-                    await redisClient.watch(key); // Theo dõi key tồn kho
+                const key = `${item.product_id}-${item.size_id}-${item.color_id}`;
+                const availableStock = stockMap[key] || 0;
 
-                    let availableStock = await redisClient.get(key);
-                    availableStock = availableStock ? parseInt(availableStock, 10) : stockMap[key];
-
-                    if (availableStock < item.quantity) {
-                        await redisClient.unwatch(); // Bỏ theo dõi nếu không đủ hàng
-                        throw new Error(`Out of stock: product_id ${item.product_id}`);
-                    }
-
-                    // Dùng MULTI + EXEC để đảm bảo không bị race condition
-                    const multi = redisClient.multi();
-                    multi.decrBy(key, item.quantity);
-                    const execResult = await multi.exec();
-
-                    if (execResult) {
-                        success = true; // Nếu EXEC thành công, tiếp tục xử lý đơn hàng
-                    }
+                if (availableStock < item.quantity) {
+                    console.error(`❌ Không đủ hàng: product_id=${item.product_id}, tồn kho=${availableStock}, yêu cầu=${item.quantity}`);
+                    throw new Error(`Không đủ hàng trong kho cho sản phẩm product_id=${item.product_id}`);
                 }
             }
 
-            // 🔥 Xác định thời gian hết hạn của đơn hàng
             const expiresAt = new Date();
             expiresAt.setMinutes(expiresAt.getMinutes() + 10);
 
@@ -75,6 +112,7 @@ const OrderService = {
                 expires_at: expiresAt
             }, { transaction: t });
 
+            // 🔥 Lưu thông tin chi tiết đơn hàng
             await OrderDetail.create({
                 order_id: order.id,
                 user_id: orderData.user_id,
@@ -89,7 +127,7 @@ const OrderService = {
                 address_id: orderData.address_id
             }, { transaction: t });
 
-            // 🔥 Lưu thông tin sản phẩm vào đơn hàng & Trừ kho trong Database
+            // 🔥 Cập nhật kho MySQL
             for (const item of orderData.items) {
                 await OrderItem.create({
                     order_id: order.id,
@@ -101,13 +139,15 @@ const OrderService = {
                     reserved: true
                 }, { transaction: t });
 
+                console.log(`📉 Cập nhật kho MySQL: product_id=${item.product_id}, size_id=${item.size_id}, color_id=${item.color_id}, quantity=${item.quantity}`);
                 await ProductStock.update(
                     { quantity: sequelize.literal(`quantity - ${item.quantity}`) },
                     {
                         where: {
                             product_id: item.product_id,
                             size_id: item.size_id,
-                            color_id: item.color_id
+                            color_id: item.color_id,
+                            quantity: { [Op.gte]: item.quantity }
                         },
                         transaction: t
                     }
@@ -115,39 +155,28 @@ const OrderService = {
             }
 
             await t.commit();
-
-            // 🔥 Cập nhật lại Redis với số lượng tồn kho mới sau khi đặt hàng thành công
-            for (const item of orderData.items) {
-                const key = `stock:${item.product_id}:${item.size_id}:${item.color_id}`;
-                
-                // Lấy lại số lượng stock từ Database
-                const updatedStock = await ProductStock.findOne({
-                    where: {
-                        product_id: item.product_id,
-                        size_id: item.size_id,
-                        color_id: item.color_id
-                    }
-                });
-
-                if (updatedStock) {
-                    await redisClient.set(key, updatedStock.quantity); // Cập nhật Redis
-                }
-            }
-
             return order;
         } catch (error) {
             await t.rollback();
-
-            // 🔥 Nếu lỗi, trả lại số lượng hàng đã giữ trong Redis
-            for (const item of orderData.items) {
-                const key = `stock:${item.product_id}:${item.size_id}:${item.color_id}`;
-                await redisClient.incrBy(key, item.quantity);
-            }
+            console.error(`❌ Đơn hàng bị hủy do lỗi: ${error.message}`);
 
             throw error;
         }
     },
 
+    // 📌 Cập nhật trạng thái đơn hàng
+    updateOrderStatus: async (orderId, status) => {
+        const allowedStatuses = ['pending', 'completed', 'canceled', 'failed', 'in_payment', 'in_progress'];
+        if (!allowedStatuses.includes(status)) {
+            throw new Error('Invalid status');
+        }
+
+        const [updated] = await Order.update({ status }, { where: { id: orderId } });
+
+        return updated > 0;
+    },
+
+    // 📌 Hủy đơn hàng hết hạn và trả lại stock
     cancelExpiredOrders: async () => {
         const expiredOrders = await Order.findAll({
             where: {
@@ -163,7 +192,7 @@ const OrderService = {
                 const stockKey = `stock:${item.product_id}:${item.size_id}:${item.color_id}`;
 
                 // 🔥 Trả lại số lượng hàng đã giữ vào Redis
-                await redisClient.incrBy(stockKey, item.quantity);
+                await redisQueueClient.incrBy(stockKey, item.quantity);
 
                 // 🔥 Cập nhật lại Database (trả hàng về kho)
                 await ProductStock.update(

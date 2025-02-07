@@ -22,6 +22,7 @@ const reviewRoutes = require('./routes/reviewRoutes');
 const productsByCategoryRoute = require('./routes/productsByCategoryRoute');
 const colorRoutes = require('./routes/colorRoutes');
 const oderRoute = require('./routes/orderRoute');
+const worker = require('./services/orderWorker');  // Import the worker for order processing
 
 
 const app = express();
@@ -115,6 +116,9 @@ cron.schedule('0 2 * * *', () => {
     console.log('Running is_new update cron job...');
     updateIsNewStatus();
 });
+
+// Start worker for order processing
+worker
 
 // Export the app for server use
 module.exports = app;
