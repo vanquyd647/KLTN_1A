@@ -1,6 +1,7 @@
 const OrderService = require('../services/orderService');
 const { sequelize } = require('../models');
 const ProductStock = require('../models/ProductStock')(sequelize);
+const cartService = require('../services/cartService');
 const { Op } = require('sequelize');
 const { createClient } = require('redis');
 
@@ -22,24 +23,45 @@ redisClient.on('error', (err) => console.error('❌ Lỗi kết nối Redis:', e
 
 class OrderController {
     static async createOrder(req, res) {
+        const lockKey = `order_lock:${Date.now()}`;
         try {
             const userId = req.userId || null;
             const orderData = { ...req.body, user_id: userId };
 
-            // 🔥 Kiểm tra dữ liệu đầu vào
+            // Validation đầu vào
             if (!orderData.carrier_id || !orderData.original_price ||
                 !orderData.discounted_price || !orderData.final_price || !orderData.items) {
-                return res.status(400).json({ status: 'error', message: 'Dữ liệu đơn hàng không hợp lệ!' });
+                return res.status(400).json({
+                    code: 400,
+                    status: 'error',
+                    message: 'Dữ liệu đơn hàng không hợp lệ!'
+                });
             }
 
-            // 🔥 Lấy danh sách product_id, size_id, color_id để kiểm tra tồn kho
+            // Kiểm tra items trùng lặp
+            const uniqueItems = new Set();
+            for (const item of orderData.items) {
+                const key = `${item.product_id}-${item.size_id}-${item.color_id}`;
+                if (uniqueItems.has(key)) {
+                    return res.status(400).json({
+                        code: 400,
+                        status: 'error',
+                        message: 'Không thể đặt trùng sản phẩm với cùng size và màu'
+                    });
+                }
+                uniqueItems.add(key);
+            }
+
+            // Lock để tránh race condition
+            await redisClient.set(lockKey, '1', 'EX', 10); // Lock 10s
+
             const productIds = orderData.items.map(item => item.product_id);
             const sizeIds = orderData.items.map(item => item.size_id);
             const colorIds = orderData.items.map(item => item.color_id);
 
-            // 🔥 Kiểm tra tồn kho từ MySQL
+            // Kiểm tra tồn kho MySQL
             const stockData = await ProductStock.findAll({
-                where: { 
+                where: {
                     product_id: { [Op.in]: productIds },
                     size_id: { [Op.in]: sizeIds },
                     color_id: { [Op.in]: colorIds }
@@ -47,46 +69,56 @@ class OrderController {
                 attributes: ['product_id', 'size_id', 'color_id', 'quantity']
             });
 
-            // 🔥 Xây dựng stockMap từ MySQL
+            // Xây dựng stockMap
             const stockMap = {};
             for (const stock of stockData) {
                 const key = `stock:${stock.product_id}:${stock.size_id}:${stock.color_id}`;
                 stockMap[key] = stock.quantity;
 
-                // Nếu Redis chưa có dữ liệu, tải từ MySQL lên trước
+                // Sync Redis với MySQL
                 let redisStock = await redisClient.get(key);
                 if (redisStock === null || isNaN(parseInt(redisStock, 10))) {
                     await redisClient.set(key, stock.quantity.toString());
                 }
             }
 
-            // 🔥 Kiểm tra tồn kho từ Redis trước khi trừ
+            // Kiểm tra tồn kho Redis
             for (const item of orderData.items) {
                 const key = `stock:${item.product_id}:${item.size_id}:${item.color_id}`;
                 let redisStock = await redisClient.get(key);
 
                 if (redisStock === null || isNaN(parseInt(redisStock, 10))) {
-                    return res.status(500).json({ status: 'error', message: `Lỗi dữ liệu tồn kho Redis cho sản phẩm product_id=${item.product_id}` });
+                    await redisClient.del(lockKey);
+                    return res.status(500).json({
+                        code: 500,
+                        status: 'error',
+                        message: `Lỗi dữ liệu tồn kho Redis cho sản phẩm product_id=${item.product_id}`
+                    });
                 }
 
                 redisStock = parseInt(redisStock, 10);
-
                 if (redisStock < item.quantity) {
-                    return res.status(400).json({ status: 'error', message: `Không đủ hàng trong kho cho sản phẩm product_id=${item.product_id}` });
+                    await redisClient.del(lockKey);
+                    return res.status(400).json({
+                        code: 400,
+                        status: 'error',
+                        message: `Không đủ hàng trong kho cho sản phẩm product_id=${item.product_id}`
+                    });
                 }
             }
 
-            // 🔥 Nếu đủ hàng, trừ số lượng trong Redis ngay lập tức
+            // Trừ số lượng trong Redis
+            const redisOps = [];
             for (const item of orderData.items) {
                 const key = `stock:${item.product_id}:${item.size_id}:${item.color_id}`;
-                await redisClient.decrBy(key, item.quantity);
+                redisOps.push(redisClient.decrBy(key, item.quantity));
             }
+            await Promise.all(redisOps);
 
             try {
-                // 🔥 Thêm vào hàng đợi
                 const jobId = await OrderService.createOrder(orderData);
 
-                // ⏳ Chờ phản hồi từ Worker (tối đa 10 giây)
+                // Chờ kết quả xử lý
                 let result;
                 let attempts = 10;
                 while (attempts--) {
@@ -96,31 +128,85 @@ class OrderController {
                 }
 
                 if (result && result.success) {
-                    return res.status(201).json({ status: 'success', message: 'Đơn hàng đã được xử lý', orderId: result.orderId });
-                } else {
-                    console.error(`❌ Lỗi xử lý đơn hàng: ${result ? result.error : 'Không có phản hồi từ Worker'}`);
+                    // Xóa sản phẩm đã đặt khỏi giỏ hàng
+                    if (orderData.cart_id) { // Đảm bảo có cart_id
+                        try {
+                            console.log('Cart ID from order data:', orderData.cart_id);
 
-                    // 🔄 Hoàn lại số lượng trong Redis nếu có lỗi
-                    for (const item of orderData.items) {
-                        const key = `stock:${item.product_id}:${item.size_id}:${item.color_id}`;
-                        await redisClient.incrBy(key, item.quantity);
+                            const cartItemsToRemove = orderData.items.map(item => ({
+                                cart_id: orderData.cart_id, // Sử dụng cart_id từ orderData
+                                productId: item.product_id,
+                                sizeId: item.size_id,
+                                colorId: item.color_id
+                            }));
+
+                            console.log('Items to remove:', cartItemsToRemove);
+
+                            const removeResults = await Promise.all(
+                                cartItemsToRemove.map(item =>
+                                    cartService.removeSpecificPendingCartItem(
+                                        item.cart_id,
+                                        item.productId,
+                                        item.sizeId,
+                                        item.colorId
+                                    )
+                                )
+                            );
+
+                            console.log('Remove results:', removeResults);
+                        } catch (error) {
+                            console.error('Lỗi khi xóa sản phẩm khỏi giỏ hàng:', error);
+                            // Log lỗi nhưng không throw để không ảnh hưởng đến việc tạo đơn hàng
+                        }
                     }
 
-                    return res.status(500).json({ status: 'error', message: result ? result.error : 'Lỗi xử lý đơn hàng' });
+                    await redisClient.del(lockKey);
+                    return res.status(201).json({ 
+                        code: 201,
+                        status: 'success', 
+                        message: 'Đơn hàng đã được xử lý', 
+                        orderId: result.orderId 
+                    });
+                } else {
+                    // Rollback Redis nếu có lỗi
+                    const rollbackOps = [];
+                    for (const item of orderData.items) {
+                        const key = `stock:${item.product_id}:${item.size_id}:${item.color_id}`;
+                        rollbackOps.push(redisClient.incrBy(key, item.quantity));
+                    }
+                    await Promise.all(rollbackOps);
+
+                    await redisClient.del(lockKey);
+                    return res.status(500).json({
+                        code: 500,
+                        status: 'error',
+                        message: result ? result.error : 'Lỗi xử lý đơn hàng'
+                    });
                 }
             } catch (error) {
-                console.error('❌ Lỗi khi gửi đơn hàng vào hàng đợi:', error.message);
-
+                // Rollback Redis khi có lỗi
+                const rollbackOps = [];
                 for (const item of orderData.items) {
                     const key = `stock:${item.product_id}:${item.size_id}:${item.color_id}`;
-                    await redisClient.incrBy(key, item.quantity);
+                    rollbackOps.push(redisClient.incrBy(key, item.quantity));
                 }
+                await Promise.all(rollbackOps);
 
-                return res.status(500).json({ status: 'error', message: 'Lỗi xử lý đơn hàng' });
+                await redisClient.del(lockKey);
+                return res.status(500).json({
+                    code: 500,
+                    status: 'error',
+                    message: 'Lỗi xử lý đơn hàng'
+                });
             }
 
         } catch (error) {
-            res.status(500).json({ status: 'error', message: error.message });
+            await redisClient.del(lockKey);
+            res.status(500).json({
+                code: 500,
+                status: 'error',
+                message: error.message
+            });
         }
     }
 

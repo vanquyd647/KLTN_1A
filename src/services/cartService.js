@@ -467,7 +467,72 @@ const cartService = {
             console.error('Error in updateCartItemQuantity:', error);
             throw error;
         }
+    },
+
+    /**
+     * Removes specific pending cart items based on product, size, color, and quantity.
+     *
+     * @async
+     * @function removeSpecificPendingCartItem
+     * @param {number} cartId - The ID of the cart.
+     * @param {number} productId - The ID of the product.
+     * @param {number} sizeId - The ID of the size.
+     * @param {number} colorId - The ID of the color.
+     * @param {number} quantity - The quantity to match.
+     * @returns {Promise<number>} The number of items removed.
+     * @throws {Error} Throws an error if the removal process fails.
+     */
+    // Trong cartService.js - Sửa lại hàm removeSpecificPendingCartItem
+
+    async removeSpecificPendingCartItem(cartId, productId, sizeId, colorId) {
+        console.log('Attempting to delete cart item with:', {
+            cartId,
+            productId,
+            sizeId,
+            colorId
+        });
+
+        try {
+            // Kiểm tra xem cart item có tồn tại không trước khi xóa
+            const cartItem = await CartItem.findOne({
+                where: {
+                    cart_id: cartId,
+                    product_id: productId,
+                    size_id: sizeId,
+                    color_id: colorId
+                }
+            });
+
+            if (!cartItem) {
+                console.log('Cart item not found:', {
+                    cartId,
+                    productId,
+                    sizeId,
+                    colorId
+                });
+                return 0;
+            }
+
+            // Thực hiện xóa
+            const deletedCount = await CartItem.destroy({
+                where: {
+                    cart_id: cartId,
+                    product_id: productId,
+                    size_id: sizeId,
+                    color_id: colorId
+                }
+            });
+
+            console.log('Deleted count:', deletedCount);
+            return deletedCount;
+        } catch (error) {
+            console.error('❌ Error in removeSpecificPendingCartItem:', error);
+            throw error;
+        }
     }
+
+
+
 
 };
 
