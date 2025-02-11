@@ -16,11 +16,11 @@ module.exports = (sequelize) => {
             }
         },
         payment_method: {
-            type: DataTypes.ENUM('credit_card', 'paypal', 'bank_transfer', 'cash_on_delivery'),
+            type: DataTypes.ENUM('bank_transfer', 'cash_on_delivery', 'payos'),
             allowNull: false
         },
         payment_status: {
-            type: DataTypes.ENUM('pending', 'completed', 'failed'),
+            type: DataTypes.ENUM('paid', 'pending','processing', 'cancelled'),
             allowNull: false,
             defaultValue: 'pending'
         },

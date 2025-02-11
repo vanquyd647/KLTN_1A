@@ -21,10 +21,11 @@ const reviewRoutes = require('./routes/reviewRoutes');
 const productsByCategoryRoute = require('./routes/productsByCategoryRoute');
 const colorRoutes = require('./routes/colorRoutes');
 const orderRoute = require('./routes/orderRoute');
+const paymentRoute = require('./routes/paymentRoutes');
 const worker = require('./services/orderWorker');
 const initRoles = require('./scripts/initRoles');
 const initCarriers = require('./scripts/initCarriers');
-const { updateIsNewStatus } = require('../src/script/updateIsNewStatus');
+const { updateIsNewStatus } = require('./scripts/updateIsNewStatus');
 const client = require('prom-client');
 
 const app = express();
@@ -134,6 +135,7 @@ app.use('/v1/api/reviews', reviewRoutes);
 app.use('/v1/api/products-by-category', productsByCategoryRoute);
 app.use('/v1/api/colors', colorRoutes);
 app.use('/v1/api/orders', orderRoute);
+app.use('/v1/api/payments', paymentRoute);
 
 // Schedule Cron job: Update is_new status mỗi ngày lúc 2:00 AM
 cron.schedule('0 2 * * *', () => {

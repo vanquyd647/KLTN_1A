@@ -27,7 +27,6 @@ class OrderController {
         try {
             const userId = req.userId || null;
             const orderData = { ...req.body, user_id: userId };
-
             // Validation đầu vào
             if (!orderData.carrier_id || !orderData.original_price ||
                 !orderData.discounted_price || !orderData.final_price || !orderData.items) {

@@ -50,12 +50,6 @@ module.exports = (sequelize) => {
             allowNull: false,
             comment: 'Giá cuối cùng phải thanh toán'
         },
-        payment_method: {
-            type: DataTypes.ENUM('cod', 'credit_card', 'paypal', 'bank_transfer'),
-            allowNull: false,
-            defaultValue: 'cod',
-            comment: 'Phương thức thanh toán'
-        },
         status: {
             type: DataTypes.ENUM('pending', 'completed', 'canceled', 'failed', 'in_payment', 'in_progress'),
             allowNull: false,

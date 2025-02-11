@@ -5,8 +5,6 @@ const Order = require('../models/Order')(sequelize);
 const OrderDetail = require('../models/OrderDetails')(sequelize);
 const OrderItem = require('../models/OrderItem')(sequelize);
 const ProductStock = require('../models/ProductStock')(sequelize);
-const logger = require('../configs/winston');
-
 const { Op } = require('sequelize');
 require('dotenv').config();
 
@@ -17,15 +15,13 @@ const redisQueueClient = createClient({
 });
 
 redisQueueClient.on('connect', () => console.log('✅ Kết nối Redis Queue thành công!'));
-redisQueueClient.on('error', (err) => logger.error(`❌ Lỗi Redis Queue: ${err.message}`, { error: err }));
-
+redisQueueClient.on('error', (err) => console.error('❌ Lỗi Redis Queue:', err));
 
 (async () => {
     try {
         await redisQueueClient.connect();
     } catch (error) {
         console.error('❌ Không thể kết nối Redis Queue:', error);
-        logger.error('❌ Không thể kết nối Redis Queue:', { error });
     }
 })();
 
@@ -43,7 +39,6 @@ const OrderService = {
     createOrder: async (orderData) => {
         if (!orderData.carrier_id || !orderData.original_price ||
             !orderData.discounted_price || !orderData.final_price || !orderData.items) {
-            logger.error('❌ Thiếu thông tin quan trọng trong đơn hàng!', { orderData });
             throw new Error("Thiếu thông tin quan trọng trong đơn hàng!");
         }
 
@@ -110,12 +105,10 @@ const OrderService = {
                 }); // Debug log
 
                 if (typeof availableStock === 'undefined') {
-                    logger.error(`Không tìm thấy stock cho sản phẩm: ${key}`);
                     throw new Error(`Không tìm thấy stock cho sản phẩm: ${key}`);
                 }
 
                 if (availableStock < item.quantity) {
-                    logger.error(`Không đủ hàng trong kho cho sản phẩm ${key}. Còn lại: ${availableStock}, Yêu cầu: ${item.quantity}`);
                     throw new Error(`Không đủ hàng trong kho cho sản phẩm ${key}. Còn lại: ${availableStock}, Yêu cầu: ${item.quantity}`);
                 }
             }
@@ -129,7 +122,6 @@ const OrderService = {
                 original_price: orderData.original_price,
                 discounted_price: orderData.discounted_price,
                 final_price: orderData.final_price,
-                payment_method: orderData.payment_method,
                 status: 'pending',
                 expires_at: new Date(Date.now() + 10 * 60 * 1000)
             }, { transaction: t });
@@ -144,6 +136,21 @@ const OrderService = {
                     quantity: item.quantity,
                     price: item.price,
                     reserved: true
+                }, { transaction: t });
+
+                // 🔥 Lưu thông tin chi tiết đơn hàng
+                await OrderDetail.create({
+                    order_id: order.id,
+                    user_id: orderData.user_id,
+                    name: orderData.name,
+                    email: orderData.email,
+                    phone: orderData.phone,
+                    street: orderData.street,
+                    ward: orderData.ward,
+                    district: orderData.district,
+                    city: orderData.city,
+                    country: orderData.country,
+                    address_id: orderData.address_id
                 }, { transaction: t });
 
                 // Cập nhật stock
@@ -168,7 +175,6 @@ const OrderService = {
 
         } catch (error) {
             await t.rollback();
-            logger.error(`❌ Lỗi khi xử lý đơn hàng: ${error.message}`, { error });
             console.error('Error in processOrder:', error);
             throw error;
         }
@@ -178,7 +184,6 @@ const OrderService = {
     updateOrderStatus: async (orderId, status) => {
         const allowedStatuses = ['pending', 'completed', 'canceled', 'failed', 'in_payment', 'in_progress'];
         if (!allowedStatuses.includes(status)) {
-            logger.error('Trạng thái không hợp lệ');
             throw new Error('Invalid status');
         }
 
@@ -235,7 +240,6 @@ const OrderService = {
     updateOrderStatus: async (orderId, status) => {
         const allowedStatuses = ['pending', 'completed', 'canceled', 'failed', 'in_payment', 'in_progress'];
         if (!allowedStatuses.includes(status)) {
-            logger.error('Trạng thái không hợp lệ');
             throw new Error('Invalid status');
         }
 
@@ -265,7 +269,6 @@ const OrderService = {
             return deleted > 0;
         } catch (error) {
             await t.rollback();
-            logger.error(`❌ Lỗi khi xóa đơn hàng: ${error.message}`, { error });
             throw error;
         }
     }
