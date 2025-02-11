@@ -16,7 +16,7 @@ module.exports = (sequelize) => {
             }
         },      
         status: {
-            type: DataTypes.ENUM('initiated', 'success', 'failure'),
+            type: DataTypes.ENUM('initiated', 'success', 'failure', 'cancelled', 'pending'),
             allowNull: false
         },
         created_at: {
@@ -27,4 +27,4 @@ module.exports = (sequelize) => {
         tableName: 'payment_logs',
         timestamps: false
     });
-};  
+};
