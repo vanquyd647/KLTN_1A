@@ -5,6 +5,8 @@ const Order = require('../models/Order')(sequelize);
 const OrderDetail = require('../models/OrderDetails')(sequelize);
 const OrderItem = require('../models/OrderItem')(sequelize);
 const ProductStock = require('../models/ProductStock')(sequelize);
+const logger = require('../configs/winston');
+
 const { Op } = require('sequelize');
 require('dotenv').config();
 
@@ -15,13 +17,15 @@ const redisQueueClient = createClient({
 });
 
 redisQueueClient.on('connect', () => console.log('✅ Kết nối Redis Queue thành công!'));
-redisQueueClient.on('error', (err) => console.error('❌ Lỗi Redis Queue:', err));
+redisQueueClient.on('error', (err) => logger.error(`❌ Lỗi Redis Queue: ${err.message}`, { error: err }));
+
 
 (async () => {
     try {
         await redisQueueClient.connect();
     } catch (error) {
         console.error('❌ Không thể kết nối Redis Queue:', error);
+        logger.error('❌ Không thể kết nối Redis Queue:', { error });
     }
 })();
 
@@ -39,6 +43,7 @@ const OrderService = {
     createOrder: async (orderData) => {
         if (!orderData.carrier_id || !orderData.original_price ||
             !orderData.discounted_price || !orderData.final_price || !orderData.items) {
+            logger.error('❌ Thiếu thông tin quan trọng trong đơn hàng!', { orderData });
             throw new Error("Thiếu thông tin quan trọng trong đơn hàng!");
         }
 
@@ -63,14 +68,14 @@ const OrderService = {
         const t = await sequelize.transaction();
         try {
             console.log('Received order data:', orderData); // Debug log
-    
+
             // Lọc bỏ trùng lặp trong mảng ID trước khi query
             const productIds = [...new Set(orderData.items.map(item => item.product_id))];
             const sizeIds = [...new Set(orderData.items.map(item => item.size_id))];
             const colorIds = [...new Set(orderData.items.map(item => item.color_id))];
-    
+
             console.log('Unique IDs for query:', { productIds, sizeIds, colorIds }); // Debug log
-    
+
             // Query stock data với các ID đã được lọc trùng
             const stockData = await ProductStock.findAll({
                 where: {
@@ -83,36 +88,38 @@ const OrderService = {
                 transaction: t,
                 lock: true
             });
-    
+
             console.log('Found stock data:', stockData); // Debug log
-    
+
             // Tạo map để kiểm tra stock
             const stockMap = {};
             stockData.forEach(stock => {
                 const key = `${stock.product_id}-${stock.size_id}-${stock.color_id}`;
                 stockMap[key] = stock.quantity;
             });
-    
+
             // Kiểm tra stock cho từng item
             for (const item of orderData.items) {
                 const key = `${item.product_id}-${item.size_id}-${item.color_id}`;
                 const availableStock = stockMap[key];
-    
+
                 console.log('Checking stock for:', {
                     key,
                     requestedQuantity: item.quantity,
                     availableStock
                 }); // Debug log
-    
+
                 if (typeof availableStock === 'undefined') {
+                    logger.error(`Không tìm thấy stock cho sản phẩm: ${key}`);
                     throw new Error(`Không tìm thấy stock cho sản phẩm: ${key}`);
                 }
-    
+
                 if (availableStock < item.quantity) {
+                    logger.error(`Không đủ hàng trong kho cho sản phẩm ${key}. Còn lại: ${availableStock}, Yêu cầu: ${item.quantity}`);
                     throw new Error(`Không đủ hàng trong kho cho sản phẩm ${key}. Còn lại: ${availableStock}, Yêu cầu: ${item.quantity}`);
                 }
             }
-    
+
             // Tạo đơn hàng
             const order = await Order.create({
                 user_id: orderData.user_id,
@@ -126,7 +133,7 @@ const OrderService = {
                 status: 'pending',
                 expires_at: new Date(Date.now() + 10 * 60 * 1000)
             }, { transaction: t });
-    
+
             // Tạo order items và cập nhật stock
             for (const item of orderData.items) {
                 await OrderItem.create({
@@ -138,7 +145,7 @@ const OrderService = {
                     price: item.price,
                     reserved: true
                 }, { transaction: t });
-    
+
                 // Cập nhật stock
                 await ProductStock.update(
                     {
@@ -155,12 +162,13 @@ const OrderService = {
                     }
                 );
             }
-    
+
             await t.commit();
             return order;
-    
+
         } catch (error) {
             await t.rollback();
+            logger.error(`❌ Lỗi khi xử lý đơn hàng: ${error.message}`, { error });
             console.error('Error in processOrder:', error);
             throw error;
         }
@@ -170,6 +178,7 @@ const OrderService = {
     updateOrderStatus: async (orderId, status) => {
         const allowedStatuses = ['pending', 'completed', 'canceled', 'failed', 'in_payment', 'in_progress'];
         if (!allowedStatuses.includes(status)) {
+            logger.error('Trạng thái không hợp lệ');
             throw new Error('Invalid status');
         }
 
@@ -226,6 +235,7 @@ const OrderService = {
     updateOrderStatus: async (orderId, status) => {
         const allowedStatuses = ['pending', 'completed', 'canceled', 'failed', 'in_payment', 'in_progress'];
         if (!allowedStatuses.includes(status)) {
+            logger.error('Trạng thái không hợp lệ');
             throw new Error('Invalid status');
         }
 
@@ -255,6 +265,7 @@ const OrderService = {
             return deleted > 0;
         } catch (error) {
             await t.rollback();
+            logger.error(`❌ Lỗi khi xóa đơn hàng: ${error.message}`, { error });
             throw error;
         }
     }

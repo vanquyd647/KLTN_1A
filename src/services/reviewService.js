@@ -4,6 +4,7 @@
  * Review Service - Handles CRUD operations for reviews
  */
 const { Op } = require('sequelize');
+const logger = require('../configs/winston');
 const { Review, Product, User } = require('../models'); // Ensure correct path
 
 const reviewService = {
@@ -20,6 +21,7 @@ const reviewService = {
             });
             return newReview;
         } catch (error) {
+            logger.error('Error creating review:', error);
             console.error('Error creating review:', error);
             throw new Error('Could not create review');
         }
@@ -58,6 +60,7 @@ const reviewService = {
                 currentPage: Math.floor(offset / limit) + 1,
             };
         } catch (error) {
+            logger.error('Error fetching reviews:', error);
             console.error('Error fetching reviews:', error);
             throw new Error('Could not fetch reviews');
         }
@@ -81,6 +84,7 @@ const reviewService = {
                 totalReviews: result?.total_reviews ? parseInt(result.total_reviews, 10) : 0,
             };
         } catch (error) {
+            logger.error('Error calculating average rating:', error);
             console.error('Error calculating average rating:', error);
             throw new Error('Could not calculate average rating');
         }
@@ -96,6 +100,7 @@ const reviewService = {
             });
             return result > 0;
         } catch (error) {
+            logger.error('Error deleting review:', error);
             console.error('Error deleting review:', error);
             throw new Error('Could not delete review');
         }
@@ -125,6 +130,7 @@ const reviewService = {
                 created_at: review.created_at,
             }));
         } catch (error) {
+            logger.error('Error fetching user reviews:', error);
             console.error('Error fetching user reviews:', error);
             throw new Error('Could not fetch user reviews');
         }

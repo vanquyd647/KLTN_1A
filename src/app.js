@@ -12,6 +12,7 @@ const cors = require('cors');
 const { sequelize } = require('./models');
 const redisClient = require('./configs/redisClient');
 const rateLimiter = require('./middlewares/rateLimiter');
+const errorHandler = require('./middlewares/errorMiddleware');
 const ensureSession = require('./middlewares/ensureSession');
 const userRoute = require('./routes/userRoute');
 const productRoute = require('./routes/productRoute');
@@ -90,7 +91,7 @@ app.use(ensureSession);
 app.use(compression());
 app.use(express.json());
 app.use(cors(corsOptions));
-
+app.use(errorHandler);
 // API Documentation
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 

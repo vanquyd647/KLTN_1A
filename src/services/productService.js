@@ -2,6 +2,7 @@
 
 const { Product, Category, Color, Size, ProductCategory, ProductColor, ProductSize, ProductStock } = require('../models');
 const { sequelize } = require('../models');  // Hoặc đường dẫn đúng đến nơi cấu hình sequelize
+const logger = require('../configs/winston');
 const slugify = require('slugify');
 const { Op } = require('sequelize');
 
@@ -133,6 +134,7 @@ const productService = {
         } catch (error) {
             // Nếu có lỗi, rollback giao dịch
             await t.rollback();
+            logger.error('Error creating products:', error);
             throw error;
         }
     },
@@ -178,6 +180,7 @@ const productService = {
                 ],
             });
         } catch (error) {
+            logger.error('Error fetching products:', error);
             console.error('Error details:', error);
             throw new Error('Failed to fetch products');
         }
@@ -252,6 +255,7 @@ const productService = {
                 },
             };
         } catch (error) {
+            logger.error('Error fetching paginated products:', error);
             console.error('Error fetching paginated products:', error);
             throw new Error('Failed to fetch products with pagination');
         }
@@ -358,6 +362,7 @@ const productService = {
                 },
             };
         } catch (error) {
+            logger.error('Error fetching new products with pagination:', error);
             console.error('Error fetching new products with pagination:', error);
             throw new Error('Failed to fetch new products with pagination');
         }
@@ -465,6 +470,7 @@ const productService = {
                 },
             };
         } catch (error) {
+            logger.error('Error fetching featured products with pagination:', error);
             console.error('Error fetching featured products with pagination:', error);
             throw new Error('Failed to fetch featured products with pagination');
         }
@@ -543,6 +549,7 @@ const productService = {
                 },
             };
         } catch (error) {
+            logger.error('Error fetching new products with pagination:', error);
             console.error('Error fetching new products with pagination:', error);
             throw new Error('Failed to fetch new products with pagination');
         }
@@ -621,6 +628,7 @@ const productService = {
                 },
             };
         } catch (error) {
+            logger.error('Error fetching featured products with pagination:', error);
             console.error('Error fetching featured products with pagination:', error);
             throw new Error('Failed to fetch featured products with pagination');
         }
@@ -672,6 +680,8 @@ const productService = {
             if (!product) throw new Error('Sản phẩm không tồn tại');
             return product;
         } catch (error) {
+            logger.error('Error fetching product details:', error);
+            console.error('Error fetching product details:', error);
             throw error;
         }
     },
@@ -728,6 +738,8 @@ const productService = {
             return product;
         } catch (error) {
             await t.rollback();
+            logger.error('Error updating product:', error);
+            console.error('Error updating product:', error);
             throw error;
         }
     },
@@ -768,10 +780,11 @@ const productService = {
             return { message: 'Sản phẩm đã được xóa' };
         } catch (error) {
             await t.rollback();
+            logger.error('Error deleting product:', error);
+            console.error('Error deleting product:', error);
             throw error;
         }
     }
-
     // ... Các phương thức khác của productService
 };
 

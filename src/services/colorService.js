@@ -5,6 +5,7 @@
  */
 
 const { Color } = require('../models');
+const logger = require('../configs/winston');
 
 /**
  * Retrieves all available colors with their respective attributes.
@@ -27,6 +28,7 @@ const colorService = {
             });
             return colors;
         } catch (error) {
+            logger.error('Error fetching colors:', error);
             console.error('Error fetching colors:', error);
             throw new Error('Unable to fetch colors');
         }

@@ -1,6 +1,8 @@
 const { Worker } = require('bullmq');
 const { createClient } = require('redis');
 const OrderService = require('../services/orderService');
+const logger = require('../configs/winston');
+const { log } = require('winston');
 require('dotenv').config();
 
 // 🔥 Kết nối Redis
@@ -16,6 +18,7 @@ redisQueueClient.on('error', (err) => console.error('❌ Lỗi Redis trong Worke
     try {
         await redisQueueClient.connect();
     } catch (error) {
+        logger.error('❌ Lỗi khi kết nối Redis trong Worker:', error);
         console.error('❌ Không thể kết nối Redis trong Worker:', error);
     }
 })();
@@ -27,11 +30,14 @@ const worker = new Worker('orderQueue', async (job) => {
 
     if (!job.data.carrier_id || !job.data.original_price ||
         !job.data.discounted_price || !job.data.final_price || !job.data.items) {
+        logger.error(`❌ Đơn hàng ${job.id} bị lỗi: Thiếu thông tin quan trọng!`);
         console.error(`❌ Đơn hàng ${job.id} bị lỗi: Thiếu thông tin quan trọng!`);
-        
+
         // 🔴 Ghi nhận lỗi vào Redis
         await redisQueueClient.set(`orderResult:${job.id}`, JSON.stringify({ success: false, error: "Dữ liệu đơn hàng không hợp lệ" }), 'EX', 60);
 
+        // 🚨 Ném lỗi để BullMQ ghi nhận thất bại
+        logger.error("Dữ liệu đơn hàng không hợp lệ");
         throw new Error("Dữ liệu đơn hàng không hợp lệ");
     }
 
@@ -46,6 +52,7 @@ const worker = new Worker('orderQueue', async (job) => {
 
         return { success: true, orderId: order.id };
     } catch (error) {
+        logger.error(`❌ Lỗi khi xử lý đơn hàng ${job.id}: ${error.message}`);
         console.error(`❌ Lỗi khi xử lý đơn hàng ${job.id}: ${error.message}`);
 
         // ❌ Cập nhật trạng thái đơn hàng là "failed"
@@ -72,8 +79,9 @@ worker.on('completed', async (job, result) => {
 
 // ❌ Lắng nghe sự kiện thất bại
 worker.on('failed', async (job, err) => {
+    logger.error(`❌ Đơn hàng ${job.id} thất bại: ${err.message}`);
     console.error(`❌ Đơn hàng ${job.id} thất bại: ${err.message}`);
-    
+
     // 🔴 Ghi nhận lỗi vào Redis nếu chưa có
     const existingResult = await redisQueueClient.get(`orderResult:${job.id}`);
     if (!existingResult) {

@@ -1,6 +1,7 @@
 "use strict";
 
 const { User, UserRole, Role } = require('../models'); // Import models
+const logger = require('../configs/winston');
 const bcrypt = require('bcrypt');
 
 const userService = {
@@ -20,6 +21,7 @@ const userService = {
         const roleRecord = await Role.findOne({ where: { role_name: role } });
 
         if (!roleRecord) {
+            logger.error(`Vai trò '${role}' không hợp lệ.`);
             throw new Error(`Vai trò '${role}' không hợp lệ.`);
         }
 
@@ -60,12 +62,14 @@ const userService = {
         const user = await User.findOne({ where: { email } });
 
         if (!user) {
+            logger.error('User not found');
             throw new Error('User not found');
         }
 
         const isPasswordValid = await bcrypt.compare(password, user.password);
 
         if (!isPasswordValid) {
+            logger.error('Invalid password');
             throw new Error('Invalid password');
         }
 

@@ -5,6 +5,7 @@
  */
 
 const nodemailer = require('nodemailer');
+const logger = require('../configs/winston');
 
 /**
  * Nodemailer transporter configuration using Gmail service.
@@ -25,6 +26,7 @@ const transporter = nodemailer.createTransport({
  */
 transporter.verify((error, success) => {
     if (error) {
+        logger.error('Error connecting transporter:', error);
         console.error('Lỗi kết nối transporter:', error);
     } else {
         console.log('Email transporter sẵn sàng gửi mail');
@@ -61,6 +63,7 @@ const emailService = {
             console.log('Email đã được gửi:', info.response);
             return true;
         } catch (error) {
+            logger.error('Error sending email:', error);
             console.error('Lỗi khi gửi email:', error);
             throw new Error('Không thể gửi email');
         }

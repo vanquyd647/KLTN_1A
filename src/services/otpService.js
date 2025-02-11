@@ -2,6 +2,7 @@
 
 const crypto = require('crypto');
 const otpStore = new Map(); // Temporary storage for OTPs
+const logger = require('../configs/winston');
 const moment = require('moment-timezone');
 
 const otpService = {
@@ -34,6 +35,7 @@ const otpService = {
     verifyOtp(email, otp) {
         const data = otpStore.get(email);
         if (!data) {
+            logger.error('No OTP found for email:', email);
             console.log('No OTP found for email:', email);
             return false;
         }

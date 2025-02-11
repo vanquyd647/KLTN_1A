@@ -2,6 +2,7 @@
 
 const { Op } = require('sequelize');
 const { Product, Category, Color, Size, ProductStock } = require('../models');
+const logger = require('../configs/winston');
 
 /**
  * Retrieves a paginated list of products filtered by category with optional sorting and filtering.
@@ -103,6 +104,7 @@ const productByCategoryService = {
                 products: rows,
             };
         } catch (error) {
+            logger.error('Error fetching products by category:', error);
             console.error('Error fetching products by category:', error);
             throw new Error('Unable to fetch products by category');
         }

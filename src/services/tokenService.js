@@ -2,6 +2,7 @@
 
 const jwt = require("jsonwebtoken");
 const { Token } = require("../models"); // Import model từ Sequelize
+const logger = require('../configs/winston');
 require("dotenv").config(); // Đọc biến môi trường từ .env
 
 const tokenService = {
@@ -46,6 +47,7 @@ const tokenService = {
         try {
             return jwt.verify(token, secret); // Xác minh token
         } catch (err) {
+            logger.error("Lỗi xác minh token:", { error: err.message });
             return null; // Trả về null nếu token không hợp lệ
         }
     },
@@ -78,6 +80,7 @@ const tokenService = {
         // Tìm Refresh Token trong cơ sở dữ liệu
         const tokenData = await tokenService.findToken(refreshToken);
         if (!tokenData) {
+            logger.error("Refresh Token không tồn tại");
             throw new Error("Refresh Token không tồn tại");
         }
 
@@ -89,6 +92,7 @@ const tokenService = {
         // Xác minh tính hợp lệ của Refresh Token
         const userData = tokenService.verifyToken(refreshToken, process.env.REFRESH_TOKEN_SECRET);
         if (!userData) {
+            logger.error("Refresh Token không hợp lệ");
             throw new Error("Refresh Token không hợp lệ");
         }
 

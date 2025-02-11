@@ -4,6 +4,7 @@ const { Cart, Product, CartItem, Size, Color, ProductStock, Category } = require
 const { sequelize } = require('../models');
 const sessionService = require('./sessionService'); // Assuming sessionService is in the same directory
 const { v4: uuidv4 } = require('uuid');
+const logger = require('../configs/winston');
 
 const cartService = {
 
@@ -25,6 +26,7 @@ const cartService = {
      */
     async createCartForUser(userId, sessionId = null) {
         if (!userId) {
+            logger.error('User ID is required', { error }); 
             throw new Error('User ID is required');
         }
         // Lấy giỏ hàng của người dùng nếu tồn tại
@@ -127,6 +129,7 @@ const cartService = {
         });
 
         if (existingCart) {
+            logger.error('Guest already has an active cart', { error });
             throw new Error('Guest already has an active cart.');
         }
 
@@ -212,6 +215,7 @@ const cartService = {
             console.log('cartItemData:', cartItemData);
             const { cart_id, product_id, size_id, color_id, quantity } = cartItemData;
             if (!cart_id || !product_id || !size_id || !color_id) {
+                logger.error('Missing required fields', { error });
                 console.log('Missing required fields');
             }
 
@@ -231,6 +235,7 @@ const cartService = {
             console.log('Creating a new cart item');
             return await CartItem.create(cartItemData);
         } catch (error) {
+            logger.error('Error in cartService.addItemToCart:', error);
             console.error('Error in cartService.addItemToCart:', error);
             throw error;
         }
@@ -306,6 +311,8 @@ const cartService = {
 
             return cartItems;
         } catch (error) {
+            logger.error('Error in getCartItems:', error);
+            console.error('Error in getCartItems:', error);
             throw error;
         }
     },
@@ -410,10 +417,12 @@ const cartService = {
             });
 
             if (!cartItem) {
+                logger.error('Cart item not found', { error });
                 throw new Error('Cart item not found.');
             }
 
             if (newQuantity <= 0) {
+                logger.error('Quantity must be greater than 0', { error });
                 throw new Error('Quantity must be greater than 0.');
             }
 
@@ -464,6 +473,7 @@ const cartService = {
 
             return updatedCartItem;
         } catch (error) {
+            logger.error('Error in updateCartItemQuantity:', error);
             console.error('Error in updateCartItemQuantity:', error);
             throw error;
         }
@@ -526,13 +536,11 @@ const cartService = {
             console.log('Deleted count:', deletedCount);
             return deletedCount;
         } catch (error) {
+            logger.error('❌ Error in removeSpecificPendingCartItem:', error);
             console.error('❌ Error in removeSpecificPendingCartItem:', error);
             throw error;
         }
     }
-
-
-
 
 };
 
