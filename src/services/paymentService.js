@@ -13,7 +13,7 @@ const payos = new PayOS(
 const PaymentService = {
     createPayOSPayment: async (orderId, amount, email) => {
         const t = await sequelize.transaction();
-        
+
         try {
             // Validate input
             if (!orderId || !amount || !email) {
@@ -46,7 +46,7 @@ const PaymentService = {
 
             // Create payment link
             const paymentLinkResponse = await payos.createPaymentLink(paymentData);
-            
+
             if (!paymentLinkResponse?.checkoutUrl) {
                 throw new Error('Không nhận được URL thanh toán từ PayOS');
             }
@@ -80,7 +80,7 @@ const PaymentService = {
 
         } catch (error) {
             await t.rollback();
-            
+
             logger.error("❌ Payment creation failed:", {
                 error: error.message,
                 stack: error.stack,
@@ -182,7 +182,82 @@ const PaymentService = {
             });
             return false;
         }
-    }
+    },
+
+    // Thêm vào PaymentService object
+    createCODPayment: async (orderId, amount, email) => {
+        const t = await sequelize.transaction();
+
+        try {
+            // Validate input
+            if (!orderId || !amount || !email) {
+                throw new Error('Thiếu thông tin bắt buộc: orderId, amount, hoặc email');
+            }
+
+            // Validate amount
+            const parsedAmount = parseInt(amount);
+            if (isNaN(parsedAmount) || parsedAmount <= 0) {
+                throw new Error('Số tiền không hợp lệ');
+            }
+
+            // Create payment record
+            const payment = await Payment.create({
+                order_id: orderId,
+                payment_method: 'cash_on_delivery',
+                payment_status: 'pending',
+                payment_amount: parsedAmount,
+                created_at: new Date(),
+                updated_at: new Date()
+            }, { transaction: t });
+
+            // Create payment log
+            await PaymentLog.create({
+                order_id: orderId,
+                status: 'initiated',
+                created_at: new Date()
+            }, { transaction: t });
+
+            await t.commit();
+
+            logger.info("✅ COD Payment created successfully:", {
+                paymentId: payment.id,
+                orderId,
+                amount: parsedAmount
+            });
+
+            return {
+                success: true,
+                payment_id: payment.id,
+                order_id: orderId,
+                amount: parsedAmount,
+                payment_method: 'cash_on_delivery'
+            };
+
+        } catch (error) {
+            await t.rollback();
+
+            logger.error("❌ COD Payment creation failed:", {
+                error: error.message,
+                stack: error.stack,
+                orderId,
+                amount
+            });
+
+            // Create failure log
+            await PaymentLog.create({
+                order_id: orderId,
+                status: 'failure',
+                created_at: new Date()
+            }).catch(logError => {
+                logger.error("Failed to create failure log:", logError);
+            });
+
+            throw new Error(`Lỗi tạo thanh toán COD: ${error.message}`);
+        }
+    },
+
+
+
 };
 
 module.exports = PaymentService;

@@ -2,6 +2,7 @@ const OrderService = require('../services/orderService');
 const { sequelize } = require('../models');
 const ProductStock = require('../models/ProductStock')(sequelize);
 const cartService = require('../services/cartService');
+const productStockService = require('../services/productStockService');
 const { Op } = require('sequelize');
 const { createClient } = require('redis');
 
@@ -158,14 +159,19 @@ class OrderController {
                             // Log lỗi nhưng không throw để không ảnh hưởng đến việc tạo đơn hàng
                         }
                     }
+                    await productStockService.invalidateCache();
 
                     await redisClient.del(lockKey);
                     return res.status(201).json({ 
                         code: 201,
                         status: 'success', 
                         message: 'Đơn hàng đã được xử lý', 
-                        orderId: result.orderId 
-                    });
+                        data: {
+                            orderId: result.orderId,
+                            email: orderData.email,
+                            amount: orderData.final_price
+                        }
+                    });                    
                 } else {
                     // Rollback Redis nếu có lỗi
                     const rollbackOps = [];
