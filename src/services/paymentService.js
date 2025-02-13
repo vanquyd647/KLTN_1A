@@ -14,6 +14,7 @@ const PaymentService = {
     createPayOSPayment: async (orderId, amount, email) => {
         const t = await sequelize.transaction();
 
+
         try {
             // Validate input
             if (!orderId || !amount || !email) {
@@ -28,9 +29,9 @@ const PaymentService = {
 
             const YOUR_DOMAIN = process.env.FRONTEND_URL || 'http://localhost:3000';
 
-            // Prepare payment data
+            // Prepare payment data - sử dụng UUID trực tiếp
             const paymentData = {
-                orderCode: Number(orderId),
+                orderCode: orderId, // Sử dụng UUID trực tiếp
                 amount: parsedAmount,
                 description: `Thanh toán đơn hàng #${orderId}`,
                 items: [{

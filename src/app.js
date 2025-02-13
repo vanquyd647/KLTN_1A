@@ -27,6 +27,7 @@ const initRoles = require('./scripts/initRoles');
 const initCarriers = require('./scripts/initCarriers');
 const { updateIsNewStatus } = require('./scripts/updateIsNewStatus');
 const productStockRoutes = require('./routes/productStockRoutes');
+const { createRevenueTrigger } = require('./db/triggers');
 const client = require('prom-client');
 
 const app = express();
@@ -40,6 +41,17 @@ const httpRequestCounter = new client.Counter({
     help: 'Total number of HTTP requests',
     labelNames: ['method', 'route', 'status_code']
 });
+
+// Thêm hàm kiểm tra trigger vào initializeTriggers
+const initializeTriggers = async () => {
+    try {
+        await createRevenueTrigger();
+        const triggers = await checkTrigger();
+        logger.info('✅ All triggers initialized successfully', { triggers });
+    } catch (error) {
+        logger.error('❌ Error initializing triggers:', error);
+    }
+};
 
 // Middleware để ghi log request vào Prometheus
 app.use((req, res, next) => {
@@ -100,11 +112,22 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 // Ghi log khi server khởi động
 logger.info('🚀 Server is starting...');
 
-// Kết nối database và ghi log
+// Thêm vào phần khởi tạo database
 sequelize.authenticate()
-    .then(() => logger.info('✅ Database connection successful'))
-    .catch(err => logger.error('❌ Database connection error:', err));
-
+    .then(() => {
+        logger.info('✅ Database connection successful');
+        return initializeTriggers();
+    })
+    .then(() => {
+        return sequelize.sync({ force: false });
+    })
+    .then(() => {
+        logger.info('✅ Tables are created or synchronized!');
+    })
+    .catch(err => {
+        logger.error('❌ Database error:', err);
+    });
+    
 sequelize.sync({ force: false })
     .then(() => logger.info('✅ Tables are created or synchronized!'))
     .catch(err => logger.error('❌ Error syncing the database:', err));

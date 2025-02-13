@@ -25,6 +25,7 @@ const definePayment = require('./Payment');
 const defineReview = require('./Review');
 const definePaymentLog = require('./PaymentLog');
 const defineCarrier = require('./Carrier');
+const defineRevenue = require('./Revenue');
 
 
 const models = {
@@ -52,6 +53,7 @@ const models = {
     Review: defineReview(sequelize),
     PaymentLog: definePaymentLog(sequelize),
     Carrier: defineCarrier(sequelize),
+    Revenue: defineRevenue(sequelize),
 
 };
 
@@ -80,6 +82,7 @@ const {
     Review,
     PaymentLog,
     Carrier,
+    Revenue,
 } = models;
 
 // Các quan hệ giữa các mô hình
@@ -210,6 +213,28 @@ UserRole.belongsTo(models.User, { foreignKey: 'user_id', as: 'user' });
 // Mối quan hệ giữa User và UserRole
 Role.hasMany(UserRole, { foreignKey: 'role_id', as: 'userRoles' });
 User.hasMany(UserRole, { foreignKey: 'user_id', as: 'userRoles' });
+
+// Thêm vào phần quan hệ trong index.js
+Revenue.belongsTo(Order, {
+    foreignKey: 'order_id',
+    as: 'order'
+});
+
+Revenue.belongsTo(Payment, {
+    foreignKey: 'payment_id',
+    as: 'payment'
+});
+
+Order.hasOne(Revenue, {
+    foreignKey: 'order_id',
+    as: 'revenue'
+});
+
+Payment.hasOne(Revenue, {
+    foreignKey: 'payment_id',
+    as: 'revenue'
+});
+
 
 module.exports = {
     ...models,
