@@ -3,19 +3,21 @@ const { Carrier } = require('../models');
 
 const carriers = [
     {
-        name: 'GHTK',
-        description: 'Giao hàng tiết kiệm',
-        contact_email: 'support@ghtk.vn',
+        name: 'Giao hàng tiêu chuẩn',
+        description: 'Giao hàng tiêu chuẩn',
+        contact_email: '',
         contact_phone: '19006192',
-        website: 'https://giaohangtietkiem.vn',
+        website: '',
+        price: 20000,
         status: 'active',
     },
     {
-        name: 'GHN',
-        description: 'Giao hàng nhanh',
-        contact_email: 'cskh@ghn.vn',
-        contact_phone: '18006328',
-        website: 'https://ghn.vn',
+        name: 'Miễn phí vận chuyển',
+        description: 'Miễn phí vận chuyển',
+        contact_email: '',
+        contact_phone: '',
+        price: 0,
+        website: '',
         status: 'active',
     }
 ];

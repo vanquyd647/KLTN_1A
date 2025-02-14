@@ -34,6 +34,11 @@ module.exports = (sequelize) => {
             allowNull: true,
             comment: 'Website của nhà vận chuyển',
         },
+        price: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            comment: 'Giá vận chuyển',
+        },
         status: {
             type: DataTypes.ENUM('active', 'inactive'),
             allowNull: false,

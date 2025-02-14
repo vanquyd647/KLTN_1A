@@ -27,7 +27,8 @@ const initRoles = require('./scripts/initRoles');
 const initCarriers = require('./scripts/initCarriers');
 const { updateIsNewStatus } = require('./scripts/updateIsNewStatus');
 const productStockRoutes = require('./routes/productStockRoutes');
-const { createRevenueTrigger } = require('./db/triggers');
+const carrierRoutes = require('./routes/carrierRoute');
+const { createRevenueTrigger, checkTrigger } = require('./db/triggers');
 const client = require('prom-client');
 
 const app = express();
@@ -113,6 +114,7 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 logger.info('🚀 Server is starting...');
 
 // Thêm vào phần khởi tạo database
+// Khởi tạo database và các bảng
 sequelize.authenticate()
     .then(() => {
         logger.info('✅ Database connection successful');
@@ -123,14 +125,20 @@ sequelize.authenticate()
     })
     .then(() => {
         logger.info('✅ Tables are created or synchronized!');
+        // Khởi tạo roles sau khi database và bảng đã sẵn sàng
+        return initRoles();
+    })
+    .then(() => {
+        logger.info('🔧 Roles initialized successfully');
+        // Khởi tạo carriers sau khi roles đã được tạo
+        return initCarriers();
+    })
+    .then(() => {
+        logger.info('🚚 Carriers initialized successfully');
     })
     .catch(err => {
         logger.error('❌ Database error:', err);
     });
-    
-sequelize.sync({ force: false })
-    .then(() => logger.info('✅ Tables are created or synchronized!'))
-    .catch(err => logger.error('❌ Error syncing the database:', err));
 
 // Kiểm tra Redis và log
 app.get('/', async (req, res) => {
@@ -161,6 +169,7 @@ app.use('/v1/api/colors', colorRoutes);
 app.use('/v1/api/orders', orderRoute);
 app.use('/v1/api/payments', paymentRoute);
 app.use('/v1/api/product-stocks', productStockRoutes);
+app.use('/v1/api/carriers', carrierRoutes);
 
 // Schedule Cron job: Update is_new status mỗi ngày lúc 2:00 AM
 cron.schedule('0 2 * * *', () => {
@@ -168,15 +177,16 @@ cron.schedule('0 2 * * *', () => {
     updateIsNewStatus();
 });
 
-// Khởi tạo dữ liệu roles & carriers nếu chưa có
-(async () => {
-    await initRoles();
-    logger.info('🔧 Roles initialized successfully');
-})();
-(async () => {
-    await initCarriers();
-    logger.info('🚚 Carriers initialized successfully');
-})();
+// // Khởi tạo dữ liệu roles & carriers nếu chưa có
+// (async () => {
+//     await initRoles();
+//     logger.info('🔧 Roles initialized successfully');
+// })();
+
+// (async () => {
+//     await initCarriers();
+//     logger.info('🚚 Carriers initialized successfully');
+// })();
 
 // Khởi động worker và log
 logger.info('⚙️ Order worker started...');
