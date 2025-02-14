@@ -1,0 +1,10 @@
+Chức năng	Lệnh
+Chạy server	pm2 start server.js --name my-server
+Chạy với tất cả CPU	pm2 start server.js -i max
+Xem danh sách process	pm2 list
+Xem log realtime	pm2 logs my-server
+Dừng server	pm2 stop my-server
+Xóa server khỏi PM2	pm2 delete my-server
+Lưu trạng thái PM2	pm2 save
+Khởi động lại server khi máy reboot	pm2 startup
+Giám sát real-time	pm2 monit

@@ -1,11 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const UserController = require('../controllers/userController');
-const authMiddleware = require('../middlewares/authMiddleware');
-const rateLimiter = require('../middlewares/rateLimiter');
-const ensureSession = require('../middlewares/ensureSession');
 
-router.use(ensureSession);
+const {register, verifyOtp, login, loginForAdmin, logout, getUserProfile, refreshToken} = require('../controllers/userController');
+const authMiddleware = require('../middlewares/authMiddleware');
 
 /**
  * @swagger
@@ -74,7 +71,7 @@ router.use(ensureSession);
  *       200:
  *         description: OTP sent for verification
  */
-router.post('/register', rateLimiter, UserController.register);
+router.post('/register', register);
 
 /**
  * @swagger
@@ -100,7 +97,7 @@ router.post('/register', rateLimiter, UserController.register);
  *       201:
  *         description: User successfully registered
  */
-router.post('/verify-otp', rateLimiter, UserController.verifyOtp);
+router.post('/verify-otp', verifyOtp);
 
 /**
  * @swagger
@@ -126,7 +123,7 @@ router.post('/verify-otp', rateLimiter, UserController.verifyOtp);
  *       200:
  *         description: Login successful
  */
-router.post('/login', rateLimiter, UserController.login);
+router.post('/login', login);
 
 /**
  * @swagger
@@ -154,7 +151,7 @@ router.post('/login', rateLimiter, UserController.login);
  *       401:
  *         description: Unauthorized access
  */
-router.post('/login-admin', UserController.loginForAdmin);
+router.post('/login-admin', loginForAdmin);
 
 /**
  * @swagger
@@ -182,7 +179,7 @@ router.post('/login-admin', UserController.loginForAdmin);
  *       200:
  *         description: Logged out successfully
  */
-router.post('/logout', authMiddleware, UserController.logout);
+router.post('/logout', authMiddleware, logout);
 
 /**
  * @swagger
@@ -200,7 +197,7 @@ router.post('/logout', authMiddleware, UserController.logout);
  *             schema:
  *               $ref: '#/components/schemas/User'
  */
-router.get('/profile', authMiddleware, rateLimiter, UserController.getUserProfile);
+router.get('/profile', authMiddleware, getUserProfile);
 
 /**
  * @swagger
@@ -230,6 +227,6 @@ router.get('/profile', authMiddleware, rateLimiter, UserController.getUserProfil
  *       401:
  *         description: Invalid or expired refresh token
  */
-router.post('/refresh-token', UserController.refreshToken);
+router.post('/refresh-token', refreshToken);
 
 module.exports = router;

@@ -1,27 +1,22 @@
 require('dotenv').config();
-const redis = require('redis');
+const { createClient } = require('redis');
 
-const client = redis.createClient({
-    url: process.env.REDIS_URL,
-    password: process.env.REDIS_PASSWORD,
+// 🔥 Kết nối Redis Cache (Không còn dùng mặc định 127.0.0.1:6379)
+const redisClient = createClient({
+    url: process.env.REDIS_URL,  
+    password: process.env.REDIS_PASSWORD
 });
 
-client.on('connect', () => {
-    console.log('Kết nối Redis thành công!');
-});
+redisClient.on('connect', () => console.log('✅ Kết nối Redis Cache thành công!'));
+redisClient.on('error', (err) => console.error('❌ Lỗi kết nối Redis Cache:', err));
 
-client.on('error', (err) => {
-    console.error('Lỗi kết nối Redis:', err);
-});
-
-// Kết nối Redis
 (async () => {
     try {
-        await client.connect();
-    } catch (err) {
-        console.error('Không thể kết nối Redis:', err);
+        await redisClient.connect();
+        console.log('✅ Redis Cache đã sẵn sàng!');
+    } catch (error) {
+        console.error('❌ Không thể kết nối Redis Cache:', error);
     }
 })();
 
-module.exports = client;
-
+module.exports = redisClient;

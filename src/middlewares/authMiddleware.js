@@ -4,11 +4,8 @@ const authenticateToken = async (req, res, next) => {
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return res.status(401).json({
-            status: 'error',
-            code: 401,
-            message: 'Unauthorized: Token is missing or invalid.',
-        });
+        req.userId = null; // Cho phép khách vãng lai tiếp tục
+        return next();
     }
 
     const token = authHeader.split(' ')[1]; // Tách token từ "Bearer <token>"

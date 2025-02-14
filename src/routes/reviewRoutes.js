@@ -6,10 +6,8 @@ const {
     deleteReviewHandler,
 } = require('../controllers/reviewController');
 const authMiddleware = require('../middlewares/authMiddleware');
-const ensureSession = require('../middlewares/ensureSession');
 
 const router = express.Router();
-router.use(ensureSession);
 
 /**
  * @swagger

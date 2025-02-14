@@ -1,10 +1,8 @@
 const express = require('express');
-const productController = require('../controllers/productController');
+const {createProduct, getProducts, getProductsByPagination, getNewProductsByPagination, getNewProductsByPagination2, getFeaturedProductsByPagination, getFeaturedProductsByPagination2, getProductDetail, updateProduct, deleteProduct} = require('../controllers/productController');
 const rateLimiter = require('../middlewares/rateLimiter');
-const ensureSession = require('../middlewares/ensureSession');
 
 const router = express.Router();
-router.use(ensureSession);
 
 /**
  * @swagger
@@ -86,7 +84,7 @@ router.use(ensureSession);
  *       500:
  *         description: Internal server error
  */
-router.post('/', rateLimiter, productController.createProduct);
+router.post('/', rateLimiter, createProduct);
 
 /**
  * @swagger
@@ -102,7 +100,7 @@ router.post('/', rateLimiter, productController.createProduct);
  *       500:
  *         description: Internal server error
  */
-router.get('/', rateLimiter, productController.getProducts);
+router.get('/', rateLimiter, getProducts);
 
 /**
  * @swagger
@@ -127,7 +125,7 @@ router.get('/', rateLimiter, productController.getProducts);
  *       500:
  *         description: Internal server error
  */
-router.get('/pagination', rateLimiter, productController.getProductsByPagination);
+router.get('/pagination', rateLimiter, getProductsByPagination);
 
 /**
  * @swagger
@@ -141,7 +139,7 @@ router.get('/pagination', rateLimiter, productController.getProductsByPagination
  *       500:
  *         description: Internal server error
  */
-router.get('/new', productController.getNewProductsByPagination);
+router.get('/new', getNewProductsByPagination);
 
 /**
  * @swagger
@@ -155,7 +153,7 @@ router.get('/new', productController.getNewProductsByPagination);
  *       500:
  *         description: Internal server error
  */
-router.get('/news', productController.getNewProductsByPagination2);
+router.get('/news', getNewProductsByPagination2);
 
 /**
  * @swagger
@@ -169,7 +167,7 @@ router.get('/news', productController.getNewProductsByPagination2);
  *       500:
  *         description: Internal server error
  */
-router.get('/featured', productController.getFeaturedProductsByPagination);
+router.get('/featured', getFeaturedProductsByPagination);
 
 /**
  * @swagger
@@ -183,7 +181,7 @@ router.get('/featured', productController.getFeaturedProductsByPagination);
  *       500:
  *         description: Internal server error
  */
-router.get('/featureds', productController.getFeaturedProductsByPagination2);
+router.get('/featureds', getFeaturedProductsByPagination2);
 
 /**
  * @swagger
@@ -206,7 +204,7 @@ router.get('/featureds', productController.getFeaturedProductsByPagination2);
  *       500:
  *         description: Internal server error
  */
-router.get('/:slug', rateLimiter, productController.getProductDetail);
+router.get('/:slug', rateLimiter, getProductDetail);
 
 /**
  * @swagger
@@ -250,7 +248,7 @@ router.get('/:slug', rateLimiter, productController.getProductDetail);
  *       500:
  *         description: Internal server error
  */
-router.put('/:slug', rateLimiter, productController.updateProduct);
+router.put('/:slug', rateLimiter, updateProduct);
 
 /**
  * @swagger
@@ -273,6 +271,6 @@ router.put('/:slug', rateLimiter, productController.updateProduct);
  *       500:
  *         description: Internal server error
  */
-router.delete('/:slug', rateLimiter, productController.deleteProduct);
+router.delete('/:slug', rateLimiter, deleteProduct);
 
 module.exports = router;

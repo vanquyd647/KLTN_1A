@@ -1,3 +1,5 @@
+"use strict";
+
 const productByCategoryService = require('../services/productsByCategoryService');
 
 const getProductsByCategory = async (req, res) => {

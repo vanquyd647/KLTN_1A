@@ -1,12 +1,8 @@
 const express = require('express');
-const cartController = require('../controllers/cartController');
-const ensureSession = require('../middlewares/ensureSession');
+const {createCartForGuest, createCartForUser, getCartById, addItemToCart, removeCartItem, getCartItems, updateCartItemQuantity} = require('../controllers/cartController');
 const authMiddleware = require('../middlewares/authMiddleware');
 
 const router = express.Router();
-
-// Ensure session middleware applied to all cart routes
-router.use(ensureSession);
 
 /**
  * @swagger
@@ -17,7 +13,7 @@ router.use(ensureSession);
 
 /**
  * @swagger
- * /v1/api/cart/guest:
+ * /v1/api/carts/guest:
  *   post:
  *     summary: Create a cart for a guest user
  *     tags: [Cart]
@@ -27,11 +23,11 @@ router.use(ensureSession);
  *       500:
  *         description: Internal server error
  */
-router.post('/guest', cartController.createCartForGuest);
+router.post('/guest', createCartForGuest);
 
 /**
  * @swagger
- * /v1/api/cart/user:
+ * /v1/api/carts/user:
  *   post:
  *     summary: Create or retrieve a cart for a logged-in user
  *     tags: [Cart]
@@ -43,11 +39,11 @@ router.post('/guest', cartController.createCartForGuest);
  *       500:
  *         description: Internal server error
  */
-router.post('/user', authMiddleware, cartController.createCartForUser);
+router.post('/user', authMiddleware, createCartForUser);
 
 /**
  * @swagger
- * /v1/api/cart/{id}:
+ * /v1/api/carts/{id}:
  *   get:
  *     summary: Get cart details by ID
  *     tags: [Cart]
@@ -66,11 +62,11 @@ router.post('/user', authMiddleware, cartController.createCartForUser);
  *       500:
  *         description: Internal server error
  */
-router.get('/:id', cartController.getCartById);
+router.get('/:id', getCartById);
 
 /**
  * @swagger
- * /v1/api/cart/{cartId}/items:
+ * /v1/api/carts/{cartId}/items:
  *   post:
  *     summary: Add an item to a cart
  *     tags: [Cart]
@@ -98,11 +94,11 @@ router.get('/:id', cartController.getCartById);
  *       500:
  *         description: Internal server error
  */
-router.post('/:cartId/items', cartController.addItemToCart);
+router.post('/:cartId/items', addItemToCart);
 
 /**
  * @swagger
- * /v1/api/cart/items/{itemId}:
+ * /v1/api/carts/items/{itemId}:
  *   delete:
  *     summary: Remove an item from a cart
  *     tags: [Cart]
@@ -121,11 +117,11 @@ router.post('/:cartId/items', cartController.addItemToCart);
  *       500:
  *         description: Internal server error
  */
-router.delete('/items/:itemId', cartController.removeCartItem);
+router.delete('/items/:itemId', removeCartItem);
 
 /**
  * @swagger
- * /v1/api/cart/{cartId}/items:
+ * /v1/api/carts/{cartId}/items:
  *   get:
  *     summary: Get all items in a cart
  *     tags: [Cart]
@@ -142,6 +138,44 @@ router.delete('/items/:itemId', cartController.removeCartItem);
  *       500:
  *         description: Internal server error
  */
-router.get('/:cartId/items', cartController.getCartItems);
+router.get('/:cartId/items', getCartItems);
+
+/**
+ * @swagger
+ * /v1/api/carts/item/{itemId}:
+ *   put:
+ *     summary: Update the quantity of an item in a cart
+ *     tags: [Cart]
+ *     parameters:
+ *       - in: path
+ *         name: cartId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Cart ID
+ *       - in: path
+ *         name: itemId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Cart item ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               quantity:
+ *                 type: integer
+ *     responses:
+ *       200:
+ *         description: Cart item quantity updated successfully
+ *       404:
+ *         description: Cart item not found
+ *       500:
+ *         description: Internal server error
+ */
+router.put('/item/:itemId', updateCartItemQuantity);
 
 module.exports = router;

@@ -1,9 +1,6 @@
 const express = require('express');
-const productsByCategoryController = require('../controllers/productsByCategoryController');
-const ensureSession = require('../middlewares/ensureSession');
-
+const {getProductsByCategory} = require('../controllers/productsByCategoryController');
 const router = express.Router();
-router.use(ensureSession);
 
 /**
  * @swagger
@@ -91,6 +88,6 @@ router.use(ensureSession);
  *       500:
  *         description: Internal server error
  */
-router.get('/:categoryId', productsByCategoryController.getProductsByCategory);
+router.get('/:categoryId', getProductsByCategory);
 
 module.exports = router;

@@ -1,85 +1,88 @@
+"use strict";
+
 const crypto = require('crypto');
-const otpStore = new Map(); // Bộ nhớ tạm để lưu OTP và trạng thái xác thực
+const otpStore = new Map(); // Temporary storage for OTPs
+const logger = require('../configs/winston');
 const moment = require('moment-timezone');
 
-class OtpService {
+const otpService = {
     /**
-     * Tạo OTP ngẫu nhiên
-     * @returns {number} - Mã OTP gồm 6 chữ số
+     * Generate a random OTP
+     * @returns {number} - A 6-digit OTP code
      */
-    static generateOtp() {
-        return crypto.randomInt(100000, 999999); // Tạo mã OTP từ 100000 đến 999999
-    }
+    generateOtp() {
+        return crypto.randomInt(100000, 999999);
+    },
 
     /**
-     * Lưu OTP vào bộ nhớ tạm thời với thời gian hết hạn
-     * @param {string} email - Email của người dùng
-     * @param {number} otp - Mã OTP
-     * @param {number} expiresIn - Thời gian hết hạn tính bằng giây (mặc định: 300 giây)
+     * Save OTP into temporary storage with expiration time
+     * @param {string} email - User's email
+     * @param {number} otp - OTP code
+     * @param {number} expiresIn - Expiration time in seconds (default: 300s)
      */
-    static saveOtp(email, otp, expiresIn = 300) {
-        const expirationTime = Date.now() + expiresIn * 1000; // Tính thời gian hết hạn
-        otpStore.set(email, { otp, expirationTime, email, isVerified: false }); // Lưu OTP vào bộ nhớ tạm
-        console.log(`OTP ${otp} đã được lưu cho email ${email}, hết hạn vào ${moment(expirationTime).tz('Asia/Ho_Chi_Minh').format('YYYY-MM-DD HH:mm:ss')}`);
-    }
+    saveOtp(email, otp, expiresIn = 300) {
+        const expirationTime = Date.now() + expiresIn * 1000;
+        otpStore.set(email, { otp, expirationTime, email, isVerified: false });
+        console.log(`OTP ${otp} saved for email ${email}, expires at ${moment(expirationTime).tz('Asia/Ho_Chi_Minh').format('YYYY-MM-DD HH:mm:ss')}`);
+    },
 
     /**
-     * Xác minh OTP cho email
-     * @param {string} email - Email của người dùng
-     * @param {number|string} otp - Mã OTP cần xác minh
-     * @returns {boolean} - Trả về true nếu OTP hợp lệ, ngược lại trả về false
+     * Verify OTP for an email
+     * @param {string} email - User's email
+     * @param {number|string} otp - OTP to verify
+     * @returns {boolean} - Returns true if OTP is valid, otherwise false
      */
-    static verifyOtp(email, otp) {
-        const data = otpStore.get(email); // Lấy dữ liệu OTP từ bộ nhớ tạm
+    verifyOtp(email, otp) {
+        const data = otpStore.get(email);
         if (!data) {
-            console.log('Không tìm thấy OTP cho email:', email);
+            logger.error('No OTP found for email:', email);
+            console.log('No OTP found for email:', email);
             return false;
         }
 
         const expirationTime = moment(data.expirationTime).tz('Asia/Ho_Chi_Minh').format('YYYY-MM-DD HH:mm:ss');
         const currentTime = moment().tz('Asia/Ho_Chi_Minh').format('YYYY-MM-DD HH:mm:ss');
 
-        console.log('OTP đã lưu:', data.otp, `(type: ${typeof data.otp})`);
-        console.log('OTP nhận được:', otp, `(type: ${typeof otp})`);
-        console.log('Thời gian hết hạn:', expirationTime);
-        console.log('Thời gian hiện tại:', currentTime);
+        console.log('Stored OTP:', data.otp, `(type: ${typeof data.otp})`);
+        console.log('Received OTP:', otp, `(type: ${typeof otp})`);
+        console.log('Expiration Time:', expirationTime);
+        console.log('Current Time:', currentTime);
 
-        // Kiểm tra nếu OTP đã hết hạn
         if (moment().isAfter(moment(data.expirationTime))) {
-            console.log('OTP đã hết hạn');
-            otpStore.delete(email); // Xóa OTP khỏi bộ nhớ tạm
+            console.log('OTP expired');
+            otpStore.delete(email);
             return false;
         }
 
-        // Kiểm tra nếu OTP khớp
         if (String(data.otp) === String(otp)) {
-            data.isVerified = true; // Đánh dấu trạng thái đã xác minh
-            otpStore.set(email, data); // Cập nhật trạng thái vào bộ nhớ
-            console.log('OTP hợp lệ');
+            data.isVerified = true;
+            otpStore.set(email, data);
+            console.log('OTP verified successfully');
             return true;
         }
 
-        console.log('OTP không khớp');
+        console.log('OTP does not match');
         return false;
-    }
+    },
 
     /**
-     * Kiểm tra trạng thái xác thực OTP
-     * @param {string} email - Email của người dùng
-     * @returns {boolean} - Trả về true nếu OTP đã được xác thực
+     * Check if OTP has been verified
+     * @param {string} email - User's email
+     * @returns {boolean} - Returns true if OTP has been verified
      */
-    static isOtpVerified(email) {
+    isOtpVerified(email) {
         const data = otpStore.get(email);
-        return data?.isVerified || false; // Kiểm tra trạng thái isVerified
-    }
+        return data?.isVerified || false;
+    },
 
     /**
-     * Xóa OTP khỏi bộ nhớ tạm sau khi sử dụng
-     * @param {string} email - Email của người dùng
+     * Clear OTP from temporary storage
+     * @param {string} email - User's email
      */
-    static clearOtp(email) {
+    clearOtp(email) {
         otpStore.delete(email);
     }
-}
+};
 
-module.exports = OtpService;
+// Export all functions as a module
+module.exports = otpService;

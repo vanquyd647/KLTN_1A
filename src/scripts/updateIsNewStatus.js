@@ -1,3 +1,5 @@
+"use strict";
+
 const { Op } = require('sequelize');
 const { Product } = require('../models'); // Đường dẫn tới models
 

@@ -19,11 +19,14 @@ const defineSession = require('./Session');
 const defineCart = require('./Cart');
 const defineCartItem = require('./CartItem');
 const defineOrder = require('./Order');
+const defineOrderDetail = require('./OrderDetails');
 const defineOrderItem = require('./OrderItem');
 const definePayment = require('./Payment');
 const defineReview = require('./Review');
 const definePaymentLog = require('./PaymentLog');
 const defineCarrier = require('./Carrier');
+const defineRevenue = require('./Revenue');
+
 
 const models = {
     Product: defineProduct(sequelize),
@@ -44,11 +47,13 @@ const models = {
     Cart: defineCart(sequelize),
     CartItem: defineCartItem(sequelize),
     Order: defineOrder(sequelize),
+    OrderDetails: defineOrderDetail(sequelize),
     OrderItem: defineOrderItem(sequelize),
     Payment: definePayment(sequelize),
     Review: defineReview(sequelize),
     PaymentLog: definePaymentLog(sequelize),
     Carrier: defineCarrier(sequelize),
+    Revenue: defineRevenue(sequelize),
 
 };
 
@@ -71,11 +76,13 @@ const {
     Cart,
     CartItem,
     Order,
+    OrderDetails,
     OrderItem,
     Payment,
     Review,
     PaymentLog,
     Carrier,
+    Revenue,
 } = models;
 
 // Các quan hệ giữa các mô hình
@@ -138,6 +145,9 @@ Order.belongsTo(User, { foreignKey: 'user_id' });
 
 Order.hasMany(OrderItem, { foreignKey: 'order_id' });
 OrderItem.belongsTo(Order, { foreignKey: 'order_id' });
+
+Order.hasOne(OrderDetails, { foreignKey: 'order_id' });
+OrderDetails.belongsTo(Order, { foreignKey: 'order_id' });
 
 Product.hasMany(OrderItem, { foreignKey: 'product_id' });
 OrderItem.belongsTo(Product, { foreignKey: 'product_id' });
@@ -203,6 +213,28 @@ UserRole.belongsTo(models.User, { foreignKey: 'user_id', as: 'user' });
 // Mối quan hệ giữa User và UserRole
 Role.hasMany(UserRole, { foreignKey: 'role_id', as: 'userRoles' });
 User.hasMany(UserRole, { foreignKey: 'user_id', as: 'userRoles' });
+
+// Thêm vào phần quan hệ trong index.js
+Revenue.belongsTo(Order, {
+    foreignKey: 'order_id',
+    as: 'order'
+});
+
+Revenue.belongsTo(Payment, {
+    foreignKey: 'payment_id',
+    as: 'payment'
+});
+
+Order.hasOne(Revenue, {
+    foreignKey: 'order_id',
+    as: 'revenue'
+});
+
+Payment.hasOne(Revenue, {
+    foreignKey: 'payment_id',
+    as: 'revenue'
+});
+
 
 module.exports = {
     ...models,

@@ -1,95 +1,194 @@
-require('dotenv').config(); // Load environment variables from .env file
-
+require('dotenv').config();
+const express = require('express');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./configs/swagger');
+const logger = require('./configs/winston');  // Winston Logger
 const cookieParser = require('cookie-parser');
 const cron = require('node-cron');
-
-const express = require('express');
 const morgan = require('morgan');
 const helmet = require('helmet');
 const compression = require('compression');
 const cors = require('cors');
-const { sequelize, Product, Color, Size, ProductStock, ProductImage, ProductSize, ProductColor, Address, User, Role, UserRole, Token, Cart } = require('./models');
-const { updateIsNewStatus } = require('../src/script/updateIsNewStatus');
-const redisClient = require('./configs/redisClient');  // Import Redis client
-const rateLimiter = require('./middlewares/rateLimiter'); // Import rate limiting middleware
-const userRoute = require('./routes/userRoute'); // Import user routes
-const productRoute = require('./routes/productRoute'); // Import product routes
-const cartRoute = require('./routes/cartRoute'); // Import cart routes
+const { sequelize } = require('./models');
+const redisClient = require('./configs/redisClient');
+const rateLimiter = require('./middlewares/rateLimiter');
+const errorHandler = require('./middlewares/errorMiddleware');
+const ensureSession = require('./middlewares/ensureSession');
+const userRoute = require('./routes/userRoute');
+const productRoute = require('./routes/productRoute');
+const cartRoute = require('./routes/cartRoute');
 const reviewRoutes = require('./routes/reviewRoutes');
 const productsByCategoryRoute = require('./routes/productsByCategoryRoute');
 const colorRoutes = require('./routes/colorRoutes');
-
+const orderRoute = require('./routes/orderRoute');
+const paymentRoute = require('./routes/paymentRoutes');
+const worker = require('./services/orderWorker');
+const initRoles = require('./scripts/initRoles');
+const initCarriers = require('./scripts/initCarriers');
+const { updateIsNewStatus } = require('./scripts/updateIsNewStatus');
+const productStockRoutes = require('./routes/productStockRoutes');
+const { createRevenueTrigger } = require('./db/triggers');
+const client = require('prom-client');
 
 const app = express();
+<<<<<<< HEAD
 // Define CORS options
 const corsOptions = {
     origin: ['http://localhost:3000', 'https://kltn-1-b.vercel.app'], // Danh sách miền được phép
     methods: 'GET, POST, PUT, DELETE', // Các phương thức HTTP được phép
     allowedHeaders: ['Content-Type', 'Authorization', 'x-session-id'], // Các header được phép
     exposedHeaders: ['x-session-id'], // Các header được "phơi bày" cho client
+=======
+
+// 🔹 Thiết lập giám sát Prometheus
+client.collectDefaultMetrics({ timeout: 5000 });
+
+// Tạo metric custom: Đếm số request HTTP
+const httpRequestCounter = new client.Counter({
+    name: 'http_requests_total',
+    help: 'Total number of HTTP requests',
+    labelNames: ['method', 'route', 'status_code']
+});
+
+// Thêm hàm kiểm tra trigger vào initializeTriggers
+const initializeTriggers = async () => {
+    try {
+        await createRevenueTrigger();
+        const triggers = await checkTrigger();
+        logger.info('✅ All triggers initialized successfully', { triggers });
+    } catch (error) {
+        logger.error('❌ Error initializing triggers:', error);
+    }
+>>>>>>> main
 };
 
+// Middleware để ghi log request vào Prometheus
+app.use((req, res, next) => {
+    res.on('finish', () => {
+        httpRequestCounter.inc({ method: req.method, route: req.path, status_code: res.statusCode });
+    });
+    next();
+});
 
+// Cấu hình Winston + Morgan để log request
+const morganFormat = morgan('combined', {
+    stream: {
+        write: (message) => logger.info(message.trim())
+    }
+});
+app.use(morganFormat);
+
+// Cấu hình CORS
+const corsOptions = {
+    origin: ['http://localhost:3000', 'https://kltn-1-b-quys-projects-d07a5005.vercel.app'],
+    methods: 'GET, POST, PUT, DELETE',
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-session-id'],
+    exposedHeaders: ['x-session-id'],
+};
+
+// Bảo mật với Helmet
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'"],
+            styleSrc: ["'self'", "'unsafe-inline'"],
+            imgSrc: ["'self'", "data:"],
+            objectSrc: ["'none'"],
+            upgradeInsecureRequests: [],
+        },
+    },
+    frameguard: { action: "sameorigin" },
+    referrerPolicy: { policy: "no-referrer" },
+    hsts: { maxAge: 31536000, includeSubDomains: true },
+    xssFilter: false,
+    noSniff: true,
+    ieNoOpen: true,
+    dnsPrefetchControl: { allow: false },
+}));
+
+// Middleware
+app.use(cookieParser());
+app.use(rateLimiter);
+app.use(ensureSession);
+app.use(compression());
+app.use(express.json());
+app.use(cors(corsOptions));
+app.use(errorHandler);
+// API Documentation
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-app.use(cookieParser()); // Parse cookies
-// Init middleware
-app.use(rateLimiter); // Use rate-limiting middleware for anti-DDoS protection
-app.use(morgan('dev')); // Log requests in dev format
-app.use(helmet()); // Add security headers to responses
-app.use(compression()); // Compress responses for performance
-app.use(express.json()); // Parse JSON bodies in incoming requests
-app.use(cors(corsOptions)); // Enable CORS with specified options
+// Ghi log khi server khởi động
+logger.info('🚀 Server is starting...');
 
-// Test Redis
+// Thêm vào phần khởi tạo database
+sequelize.authenticate()
+    .then(() => {
+        logger.info('✅ Database connection successful');
+        return initializeTriggers();
+    })
+    .then(() => {
+        return sequelize.sync({ force: false });
+    })
+    .then(() => {
+        logger.info('✅ Tables are created or synchronized!');
+    })
+    .catch(err => {
+        logger.error('❌ Database error:', err);
+    });
+    
+sequelize.sync({ force: false })
+    .then(() => logger.info('✅ Tables are created or synchronized!'))
+    .catch(err => logger.error('❌ Error syncing the database:', err));
+
+// Kiểm tra Redis và log
 app.get('/', async (req, res) => {
     try {
-        // Save a message into Redis
         await redisClient.set('message', 'API is running!');
-
-        // Retrieve the message from Redis
         const message = await redisClient.get('message');
-        res.send(message); // Send message back in the response
+        logger.info('📩 Fetched message from Redis:', message);
+        res.send(message);
     } catch (err) {
-        console.error('Error interacting with Redis:', err);
+        logger.error('❌ Error interacting with Redis:', err);
         res.status(500).send('Something went wrong!');
     }
 });
 
-// Use the user routes for all routes starting with /api/users
-app.use('/v1/api/users', userRoute);  // Register the user routes here
-app.use('/v1/api/products', productRoute);  // Register the product routes here
-app.use('/v1/api/carts', cartRoute);  // Register the cart routes here
+// Endpoint để Prometheus thu thập dữ liệu
+app.get('/metrics', async (req, res) => {
+    res.set('Content-Type', client.register.contentType);
+    res.end(await client.register.metrics());
+});
+
+// Định nghĩa route
+app.use('/v1/api/users', userRoute);
+app.use('/v1/api/products', productRoute);
+app.use('/v1/api/carts', cartRoute);
 app.use('/v1/api/reviews', reviewRoutes);
 app.use('/v1/api/products-by-category', productsByCategoryRoute);
 app.use('/v1/api/colors', colorRoutes);
+app.use('/v1/api/orders', orderRoute);
+app.use('/v1/api/payments', paymentRoute);
+app.use('/v1/api/product-stocks', productStockRoutes);
 
-
-// Database connection check
-sequelize.authenticate()
-    .then(() => {
-        console.log('Database connection successful');
-    })
-    .catch(err => {
-        console.error('Database connection error:', err);
-    });
-
-// Sync the database (create tables if they don't exist)
-sequelize.sync({ force: false })  // Use `force: false` to avoid data loss
-    .then(() => {
-        console.log('Tables are created or synchronized!');
-    })
-    .catch(err => {
-        console.error('Error syncing the database:', err);
-    });
-
-// Thiết lập cron job chạy lúc 2:00 AM mỗi ngày
+// Schedule Cron job: Update is_new status mỗi ngày lúc 2:00 AM
 cron.schedule('0 2 * * *', () => {
-    console.log('Running is_new update cron job...');
+    logger.info('🔄 Running is_new update cron job...');
     updateIsNewStatus();
 });
 
-// Export the app for server use
+// Khởi tạo dữ liệu roles & carriers nếu chưa có
+(async () => {
+    await initRoles();
+    logger.info('🔧 Roles initialized successfully');
+})();
+(async () => {
+    await initCarriers();
+    logger.info('🚚 Carriers initialized successfully');
+})();
+
+// Khởi động worker và log
+logger.info('⚙️ Order worker started...');
+worker;
+
 module.exports = app;

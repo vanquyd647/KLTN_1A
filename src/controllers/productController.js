@@ -1,3 +1,5 @@
+"use strict";
+
 const productService = require('../services/productService');
 const redisClient = require('../configs/redisClient');
 
@@ -5,15 +7,6 @@ const redisClient = require('../configs/redisClient');
 const createProduct = async (req, res) => {
     try {
         const productData = req.body;
-
-        // if (!productData.product_name || !productData.price || !productData.status) {
-        //     return res.status(400).json({
-        //         status: 'error',
-        //         code: 400,
-        //         message: 'Tất cả các trường thông tin đều bắt buộc.',
-        //         data: null
-        //     });
-        // }
 
         const newProduct = await productService.createProduct(productData);
         // Xóa cache Redis sau khi thêm sản phẩm mới

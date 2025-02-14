@@ -1,9 +1,7 @@
 const express = require('express');
-const router = express.Router();
-const ensureSession = require('../middlewares/ensureSession');
-const colorController = require('../controllers/colorController');
+const { getColors } = require('../controllers/colorController');
 
-router.use(ensureSession);
+const router = express.Router();
 
 /**
  * @swagger
@@ -47,6 +45,6 @@ router.use(ensureSession);
  *       500:
  *         description: Internal server error
  */
-router.get('/', colorController.getColors);
+router.get('/', getColors);
 
 module.exports = router;
