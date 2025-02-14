@@ -10,19 +10,19 @@ const dbdialect = process.env.DB_DIALECT || 'mysql';
 const dbport = process.env.DB_PORT || 3306;
 
 // Tạo kết nối với MariaDB bằng Sequelize
-// const sequelize = new Sequelize(testdb, dbuser, dbpass, {
-//     host: dbhost,
-//     dialect: dbdialect,  // Chỉ định MariaDB sử dụng dialect MySQL
-//     port: dbport,        // Port của MariaDB
-//     logging: console.log,  // Bật logging để xem chi tiết
-// });
-
-const sequelize = new Sequelize('testdb', 'admin', 'admin123', {
-    host: 'database-2.cvcqsyqyewxi.ap-southeast-1.rds.amazonaws.com',
-    dialect: 'mysql',
-    port: 3306,
-    logging: console.log,
+const sequelize = new Sequelize(testdb, dbuser, dbpass, {
+    host: dbhost,
+    dialect: dbdialect,  // Chỉ định MariaDB sử dụng dialect MySQL
+    port: dbport,        // Port của MariaDB
+    logging: console.log,  // Bật logging để xem chi tiết
 });
+
+// const sequelize = new Sequelize('testdb', 'admin', 'admin123', {
+//     host: 'database-2.cvcqsyqyewxi.ap-southeast-1.rds.amazonaws.com',
+//     dialect: 'mysql',
+//     port: 3306,
+//     logging: console.log,
+// });
 
 
 // Kiểm tra kết nối

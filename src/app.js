@@ -71,7 +71,7 @@ app.use(morganFormat);
 
 // Cấu hình CORS
 const corsOptions = {
-    origin: ['http://localhost:3000', 'https://kltn-1-b-quys-projects-d07a5005.vercel.app'],
+    origin: ['http://localhost:3000', 'https://kltn-1-b.vercel.app'],
     methods: 'GET, POST, PUT, DELETE',
     allowedHeaders: ['Content-Type', 'Authorization', 'x-session-id'],
     exposedHeaders: ['x-session-id'],
