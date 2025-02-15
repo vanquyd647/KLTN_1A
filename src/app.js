@@ -1,4 +1,5 @@
 require('dotenv').config();
+require('./crons/orderCron');
 const express = require('express');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./configs/swagger');
@@ -25,7 +26,7 @@ const paymentRoute = require('./routes/paymentRoutes');
 const worker = require('./services/orderWorker');
 const initRoles = require('./scripts/initRoles');
 const initCarriers = require('./scripts/initCarriers');
-const { updateIsNewStatus } = require('./scripts/updateIsNewStatus');
+const { updateIsNewStatus } = require('./crons/updateIsNewStatus');
 const productStockRoutes = require('./routes/productStockRoutes');
 const carrierRoutes = require('./routes/carrierRoute');
 const { createRevenueTrigger, checkTrigger } = require('./db/triggers');

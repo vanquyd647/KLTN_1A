@@ -1,6 +1,7 @@
 const PayOS = require("@payos/node");
 const { sequelize } = require("../models");
 const Payment = require("../models/Payment")(sequelize);
+const Order = require("../models/Order")(sequelize);
 const PaymentLog = require("../models/PaymentLog")(sequelize);
 const logger = require("../configs/winston");
 
@@ -42,6 +43,15 @@ const PaymentService = {
                 returnUrl: `${YOUR_DOMAIN}/payment/success`,
                 cancelUrl: `${YOUR_DOMAIN}/payment/cancel`,
             };
+
+            // Cập nhật trạng thái đơn hàng thành "in_payment"
+            await Order.update({
+                status: 'in_payment',
+                updated_at: new Date()
+            }, {
+                where: { id: orderId },
+                transaction: t
+            });
 
             logger.info("💳 PayOS payment data:", paymentData);
 
@@ -147,6 +157,26 @@ const PaymentService = {
                 created_at: new Date()
             }, { transaction: t });
 
+            // Update order status
+            if (status === 'paid') {
+                await Order.update({
+                    status: 'shipping',
+                    updated_at: new Date()
+                }, {
+                    where: { id: orderId },
+                    transaction: t
+                });
+
+            } else {
+                await Order.update({
+                    status: 'cancelled',
+                    updated_at: new Date()
+                }, {
+                    where: { id: orderId },
+                    transaction: t
+                });
+            }
+
             await t.commit();
 
             logger.info("✅ Webhook processed successfully:", {
@@ -189,6 +219,15 @@ const PaymentService = {
     createCODPayment: async (orderId, amount, email) => {
         const t = await sequelize.transaction();
 
+        // Cập nhật trạng thái đơn hàng thành "in_payment"
+        await Order.update({
+            status: 'in_payment',
+            updated_at: new Date()
+        }, {
+            where: { id: orderId },
+            transaction: t
+        });
+
         try {
             // Validate input
             if (!orderId || !amount || !email) {
@@ -218,6 +257,15 @@ const PaymentService = {
                 created_at: new Date()
             }, { transaction: t });
 
+            // update order status
+            await Order.update({
+                status: 'shipping',
+                updated_at: new Date()
+            }, {
+                where: { id: orderId },
+                transaction: t
+            });
+
             await t.commit();
 
             logger.info("✅ COD Payment created successfully:", {
@@ -236,6 +284,15 @@ const PaymentService = {
 
         } catch (error) {
             await t.rollback();
+
+            // update order status
+            await Order.update({
+                status: 'cancelled',
+                updated_at: new Date()
+            }, {
+                where: { id: orderId },
+                transaction: t
+            });
 
             logger.error("❌ COD Payment creation failed:", {
                 error: error.message,

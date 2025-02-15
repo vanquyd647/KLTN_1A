@@ -8,7 +8,7 @@ const carriers = [
         contact_email: '',
         contact_phone: '19006192',
         website: '',
-        price: 20000,
+        price: 2000,
         status: 'active',
     },
     {

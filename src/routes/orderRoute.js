@@ -1,5 +1,5 @@
 const express = require('express');
-const { createOrder, getOrderById, updateOrderStatus, cancelExpiredOrders, completeOrder, deleteOrder } = require('../controllers/orderController');
+const { createOrder, updateOrderStatus, cancelExpiredOrders, completeOrder, deleteOrder, getUserOrders } = require('../controllers/orderController');
 const authMiddleware = require('../middlewares/authMiddleware');
 const router = express.Router();
 
@@ -41,28 +41,6 @@ const router = express.Router();
  *         description: Unauthorized
  */
 router.post('/', authMiddleware, createOrder);
-
-/**
- * @swagger
- * /v1/api/orders/{orderId}:
- *   get:
- *     summary: Get order by ID
- *     tags: [Orders]
- *     security:
- *       - BearerAuth: []
- *     parameters:
- *       - in: path
- *         name: orderId
- *         required: true
- *         schema:
- *           type: integer
- *     responses:
- *       200:
- *         description: Order retrieved successfully
- *       404:
- *         description: Order not found
- */
-router.get('/:orderId', authMiddleware, getOrderById);
 
 /**
  * @swagger
@@ -143,5 +121,33 @@ router.post('/:orderId/complete', authMiddleware, completeOrder);
  *         description: Order deleted successfully
  */
 router.delete('/:orderId', authMiddleware, deleteOrder);
+
+/**
+ * @swagger
+ * /v1/api/orders/user:
+ *   get:
+ *     summary: Get user's orders
+ *     tags: [Orders]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *         default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *         default: 10
+ *     responses:
+ *       200:
+ *         description: List of user's orders retrieved successfully
+ *       401:
+ *         description: Unauthorized
+ */
+router.get('/user', authMiddleware, getUserOrders);
+
 
 module.exports = router;

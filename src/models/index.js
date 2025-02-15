@@ -146,8 +146,8 @@ Order.belongsTo(User, { foreignKey: 'user_id' });
 Order.hasMany(OrderItem, { foreignKey: 'order_id' });
 OrderItem.belongsTo(Order, { foreignKey: 'order_id' });
 
-Order.hasOne(OrderDetails, { foreignKey: 'order_id' });
-OrderDetails.belongsTo(Order, { foreignKey: 'order_id' });
+Order.hasOne(OrderDetails, { foreignKey: 'order_id', as: 'orderDetails' });
+OrderDetails.belongsTo(Order, { foreignKey: 'order_id', as: 'order' });
 
 Product.hasMany(OrderItem, { foreignKey: 'product_id' });
 OrderItem.belongsTo(Product, { foreignKey: 'product_id' });
@@ -169,9 +169,6 @@ Review.belongsTo(Product, { foreignKey: 'product_id' });
 User.hasMany(Review, { foreignKey: 'user_id' });
 Review.belongsTo(User, { foreignKey: 'user_id' });
 
-// Mối quan hệ giữa Order và Address
-Order.belongsTo(Address, { foreignKey: 'address_id' });
-Address.hasMany(Order, { foreignKey: 'address_id' });
 
 // Mối quan hệ giữa User và Address
 User.hasMany(Address, { foreignKey: 'user_id', as: 'addresses' });

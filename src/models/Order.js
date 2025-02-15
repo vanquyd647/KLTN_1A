@@ -51,10 +51,18 @@ module.exports = (sequelize) => {
             comment: 'Giá cuối cùng phải thanh toán'
         },
         status: {
-            type: DataTypes.ENUM('pending', 'completed', 'canceled', 'failed', 'in_payment', 'in_progress'),
+            type: DataTypes.ENUM(
+                'pending',         // Chờ xử lý
+                'completed',       // Hoàn thành
+                'cancelled',        // Đã hủy
+                'failed',         // Thất bại
+                'in_payment',     // Đang thanh toán
+                'in_progress',    // Đang xử lý
+                'shipping'        // Đang vận chuyển
+            ),
             allowNull: false,
             defaultValue: 'pending'
-        },
+        },        
         expires_at: {
             type: DataTypes.DATE,
             allowNull: true, 

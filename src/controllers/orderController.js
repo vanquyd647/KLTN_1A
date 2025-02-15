@@ -90,7 +90,6 @@ class OrderController {
                         await OrderController.removeFromCart(orderData);
                     }
                     await productStockService.invalidateCache();
-
                     await redisClient.del(lockKey);
                     return res.status(201).json({
                         code: 201,
@@ -100,6 +99,7 @@ class OrderController {
                             order_id: orderResult.orderId,
                             email: orderData.email,
                             amount: orderData.final_price,
+                            expires_at: orderResult.expires_at, // Thêm expires_at
                             items: orderData.items.map(item => ({
                                 product_name: item.product_name,
                                 quantity: item.quantity,
@@ -297,19 +297,6 @@ class OrderController {
         }
     }
 
-
-    static async getOrderById(req, res) {
-        try {
-            const order = await OrderService.getOrderById(req.params.orderId);
-            if (!order) {
-                return res.status(404).json({ status: 'error', message: 'Order not found' });
-            }
-            res.json({ status: 'success', message: 'Order retrieved successfully', data: order });
-        } catch (error) {
-            res.status(500).json({ status: 'error', message: error.message });
-        }
-    }
-
     static async updateOrderStatus(req, res) {
         try {
             const success = await OrderService.updateOrderStatus(req.params.orderId, req.body.status);
@@ -354,6 +341,43 @@ class OrderController {
             res.status(500).json({ status: 'error', message: error.message });
         }
     }
+
+    static async getUserOrders(req, res) {
+        try {
+            const userId = req.userId;
+            if (!userId) {
+                return res.status(401).json({ status: 'error', message: 'Unauthorized' });
+            }
+            const page = parseInt(req.query.page) || 1;
+            const limit = parseInt(req.query.limit) || 10;
+
+            const result = await OrderService.getOrdersByUserId(userId, page, limit);
+
+            res.json({
+                code: 200,
+                status: 'success',
+                message: 'Lấy danh sách đơn hàng thành công',
+                data: {
+                    orders: result.orders,
+                    pagination: {
+                        total: result.total,
+                        currentPage: result.currentPage,
+                        totalPages: result.totalPages
+                    }
+                }
+            });
+            
+        } catch (error) {
+            console.error('Lỗi khi lấy danh sách đơn hàng:', error);
+            res.status(500).json({
+                code: 500,
+                status: 'error',
+                message: 'Đã có lỗi xảy ra khi lấy danh sách đơn hàng',
+                error: error.message
+            });
+        }
+    }
+
 }
 
 module.exports = OrderController;

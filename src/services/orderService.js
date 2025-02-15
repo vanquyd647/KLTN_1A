@@ -1,11 +1,9 @@
 const { Queue } = require('bullmq');
 const { createClient } = require('redis');
 const { sequelize } = require('../models');
-const Order = require('../models/Order')(sequelize);
-const OrderDetail = require('../models/OrderDetails')(sequelize);
-const OrderItem = require('../models/OrderItem')(sequelize);
-const ProductStock = require('../models/ProductStock')(sequelize);
+const { Order, OrderDetails, OrderItem, Product, Size, Color, Payment, PaymentLog, Carrier, ProductColor, ProductStock } = require('../models');
 const { Op } = require('sequelize');
+const logger = require('../configs/winston');
 require('dotenv').config();
 
 // 🔥 Kết nối Redis
@@ -56,7 +54,18 @@ const OrderService = {
 
     getOrderResult: async (jobId) => {
         const result = await redisQueueClient.get(`orderResult:${jobId}`);
-        return result ? JSON.parse(result) : null;
+        if (result) {
+            const orderData = JSON.parse(result);
+            // Lấy thông tin đơn hàng từ database để có expires_at
+            if (orderData.orderId) {
+                const order = await Order.findByPk(orderData.orderId);
+                if (order) {
+                    orderData.expires_at = order.expires_at;
+                }
+            }
+            return orderData;
+        }
+        return null;
     },
 
     processOrder: async (orderData) => {
@@ -139,7 +148,7 @@ const OrderService = {
                 }, { transaction: t });
 
                 // 🔥 Lưu thông tin chi tiết đơn hàng
-                await OrderDetail.create({
+                await OrderDetails.create({
                     order_id: order.id,
                     user_id: orderData.user_id,
                     name: orderData.name,
@@ -194,47 +203,118 @@ const OrderService = {
 
     // 📌 Hủy đơn hàng hết hạn và trả lại stock
     cancelExpiredOrders: async () => {
-        const expiredOrders = await Order.findAll({
-            where: {
-                status: 'pending',
-                expires_at: { [Op.lt]: new Date() }
-            }
-        });
+        const t = await sequelize.transaction();
 
-        for (const order of expiredOrders) {
-            const orderItems = await OrderItem.findAll({ where: { order_id: order.id } });
-
-            for (const item of orderItems) {
-                const stockKey = `stock:${item.product_id}:${item.size_id}:${item.color_id}`;
-
-                // 🔥 Trả lại số lượng hàng đã giữ vào Redis
-                await redisQueueClient.incrBy(stockKey, item.quantity);
-
-                // 🔥 Cập nhật lại Database (trả hàng về kho)
-                await ProductStock.update(
-                    { quantity: sequelize.literal(`quantity + ${item.quantity}`) },
-                    {
-                        where: {
-                            product_id: item.product_id,
-                            size_id: item.size_id,
-                            color_id: item.color_id
+        try {
+            // Tìm các đơn hàng hết hạn hoặc đã hủy
+            const ordersToCancel = await Order.findAll({
+                attributes: [
+                    'id',
+                    'user_id',
+                    'carrier_id',
+                    'discount_code',
+                    'discount_amount',
+                    'original_price',
+                    'discounted_price',
+                    'final_price',
+                    'status',
+                    'expires_at',
+                    'created_at',
+                    'updated_at'
+                ],
+                where: {
+                    [Op.or]: [
+                        {
+                            status: 'pending',
+                            expires_at: { [Op.lt]: new Date() }
+                        },
+                        {
+                            status: 'cancelled',
+                            updated_at: {
+                                [Op.gt]: sequelize.literal('DATE_SUB(NOW(), INTERVAL 10 MINUTE)')
+                            }
                         }
+                    ]
+                },
+                include: [{
+                    model: OrderItem,
+                    required: true,
+                    where: {
+                        reserved: true
                     }
-                );
+                }],
+                transaction: t
+            });
+
+            logger.info(`Found ${ordersToCancel.length} orders to process stock return`);
+
+            for (const order of ordersToCancel) {
+                for (const item of order.OrderItems) {
+                    const stockKey = `stock:${item.product_id}:${item.size_id}:${item.color_id}`;
+
+                    try {
+                        // Sử dụng redisQueueClient thay vì redisClient
+                        if (redisQueueClient.isReady) {
+                            await redisQueueClient.incrBy(stockKey, item.quantity);
+                        } else {
+                            logger.warn('Redis Queue không khả dụng, bỏ qua cập nhật cache');
+                        }
+
+                        // Phần còn lại giữ nguyên
+                        await ProductStock.update(
+                            {
+                                quantity: sequelize.literal(`quantity + ${item.quantity}`)
+                            },
+                            {
+                                where: {
+                                    product_id: item.product_id,
+                                    size_id: item.size_id,
+                                    color_id: item.color_id
+                                },
+                                transaction: t
+                            }
+                        );
+
+                        await OrderItem.update(
+                            { reserved: false },
+                            {
+                                where: { id: item.id },
+                                transaction: t
+                            }
+                        );
+
+                        logger.info(`Returned stock for item: ${stockKey}, quantity: ${item.quantity}`);
+                    } catch (error) {
+                        logger.error(`Failed to return stock for item: ${stockKey}`, error);
+                        throw error;
+                    }
+                }
+
+                // Cập nhật trạng thái đơn hàng nếu chưa bị hủy
+                if (order.status === 'pending') {
+                    await Order.update(
+                        {
+                            status: 'cancelled',
+                            updated_at: new Date()
+                        },
+                        {
+                            where: { id: order.id },
+                            transaction: t
+                        }
+                    );
+                    logger.info(`Cancelled expired order ${order.id}`);
+                }
             }
 
-            // Cập nhật trạng thái đơn hàng là "canceled"
-            await Order.update({ status: 'canceled' }, { where: { id: order.id } });
-        }
-    },
+            await t.commit();
+            logger.info('Successfully processed expired/cancelled orders');
+            return true;
 
-    getOrderById: async (orderId) => {
-        return await Order.findByPk(orderId, {
-            include: [
-                { model: OrderDetail },
-                { model: OrderItem }
-            ]
-        });
+        } catch (error) {
+            await t.rollback();
+            logger.error('Error processing expired/cancelled orders:', error);
+            throw error;
+        }
     },
 
     updateOrderStatus: async (orderId, status) => {
@@ -261,7 +341,7 @@ const OrderService = {
     deleteOrder: async (orderId) => {
         const t = await sequelize.transaction();
         try {
-            await OrderDetail.destroy({ where: { order_id: orderId } }, { transaction: t });
+            await OrderDetails.destroy({ where: { order_id: orderId } }, { transaction: t });
             await OrderItem.destroy({ where: { order_id: orderId } }, { transaction: t });
             const deleted = await Order.destroy({ where: { id: orderId } }, { transaction: t });
 
@@ -271,7 +351,147 @@ const OrderService = {
             await t.rollback();
             throw error;
         }
+    },
+
+    getOrdersByUserId: async (userId, page = 1, limit = 10) => {
+        try {
+            const offset = (page - 1) * limit;
+
+            const orders = await Order.findAndCountAll({
+                where: { user_id: userId },
+                distinct: true,
+                include: [
+                    {
+                        model: OrderDetails,
+                        as: 'orderDetails', // Sử dụng đúng alias
+                        required: false
+                    },
+                    {
+                        model: OrderItem,
+                        include: [
+                            {
+                                model: Product,
+                                attributes: ['product_name', 'slug', 'price', 'discount_price', 'status', 'is_new'],
+                                include: [
+                                    {
+                                        model: Color,
+                                        as: 'productColors',
+                                        attributes: ['color', 'hex_code'],
+                                        through: {
+                                            attributes: ['image']
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                model: Size,
+                                attributes: ['size']
+                            },
+                            {
+                                model: Color,
+                                attributes: ['color', 'hex_code']
+                            }
+                        ]
+                    },
+                    {
+                        model: Payment,
+                        attributes: ['payment_method', 'payment_status', 'payment_amount', 'transaction_id', 'payment_date']
+                    },
+                    {
+                        model: Carrier,
+                        attributes: ['name', 'price', 'description'] // Thêm price và description
+                    }
+                ],
+                order: [['created_at', 'DESC']],
+                limit,
+                offset
+            });
+
+            const formattedOrders = orders.rows.map(order => ({
+                id: order.id,
+                status: order.status,
+                pricing: {
+                    original_price: order.original_price,
+                    discount_code: order.discount_code || '',
+                    discount_amount: order.discount_amount || '0.00',
+                    discounted_price: order.discounted_price,
+                    final_price: order.final_price
+                },
+                shipping: {
+                    carrier: order.Carrier?.name || '',
+                    shipping_fee: order.Carrier?.price || 0,
+                    description: order.Carrier?.description || '',
+                    recipient: order.orderDetails ? {
+                        name: order.orderDetails.name,
+                        email: order.orderDetails.email,
+                        phone: order.orderDetails.phone,
+                        address: {
+                            street: order.orderDetails.street,
+                            ward: order.orderDetails.ward,
+                            district: order.orderDetails.district,
+                            city: order.orderDetails.city,
+                            country: order.orderDetails.country
+                        }
+                    } : {
+                        name: '',
+                        email: '',
+                        phone: '',
+                        address: {}
+                    }
+                },
+                payment: {
+                    method: order.Payment?.payment_method,
+                    status: order.Payment?.payment_status,
+                    amount: order.Payment?.payment_amount,
+                    transaction_id: order.Payment?.transaction_id,
+                    payment_date: order.Payment?.payment_date
+                },
+                items: order.OrderItems?.map(item => ({
+                    product: {
+                        name: item.Product?.product_name,
+                        slug: item.Product?.slug,
+                        status: item.Product?.status,
+                        is_new: item.Product?.is_new,
+                        price: {
+                            original: item.Product?.price,
+                            discounted: item.Product?.discount_price
+                        }
+                    },
+                    variant: {
+                        size: item.Size?.size,
+                        color: {
+                            name: item.Color?.color,
+                            hex_code: item.Color?.hex_code,
+                            image: item.Product?.productColors?.find(pc =>
+                                pc.id === item.Color?.id
+                            )?.ProductColor?.image || null
+                        }
+                    },
+                    quantity: item.quantity,
+                    price: item.price,
+                    reserved: item.reserved,
+                    reserved_until: item.reserved_until
+                })),
+                dates: {
+                    created_at: order.created_at,
+                    updated_at: order.updated_at,
+                    expires_at: order.expires_at
+                }
+            }));
+
+            return {
+                orders: formattedOrders,
+                total: orders.count,
+                currentPage: page,
+                totalPages: Math.ceil(orders.count / limit)
+            };
+
+        } catch (error) {
+            console.error('Error in getOrdersByUserId:', error);
+            throw error;
+        }
     }
+
 };
 
 module.exports = OrderService;
