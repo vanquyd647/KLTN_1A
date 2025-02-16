@@ -98,6 +98,7 @@ const login = async (req, res) => {
     try {
         const { email, password } = req.body;
 
+        // authenticateUser sẽ trả về thêm cart_id
         const user = await UserService.authenticateUser(email, password);
 
         const payload = { userId: user.id };
@@ -109,7 +110,17 @@ const login = async (req, res) => {
             status: 'success',
             code: 200,
             message: 'Đăng nhập thành công!',
-            data: { accessToken, refreshToken },
+            data: {
+                accessToken,
+                refreshToken,
+                user: {
+                    id: user.id,
+                    email: user.email,
+                    firstname: user.firstname,
+                    lastname: user.lastname,
+                    cart_id: user.cart_id
+                }
+            },
         });
     } catch (error) {
         res.status(400).json({
@@ -120,6 +131,7 @@ const login = async (req, res) => {
         });
     }
 };
+
 
 const loginForAdmin = async (req, res) => {
     try {
