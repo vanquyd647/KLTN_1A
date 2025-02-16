@@ -11,15 +11,31 @@ const sessionService = {
      * @returns {Promise<Object>} - The created session
      */
     async createSession(data) {
-        const sessionId = data.session_id || uuidv4();
-        const session = await Session.create({
-            session_id: sessionId,
-            user_id: data.user_id || null, // Null for guest users
-            ip_address: data.ip_address || null,
-            user_agent: data.user_agent || null,
-            status: data.status || 'active',
-        });
-        return session;
+        try {
+            // Kiểm tra session tồn tại
+            const existingSession = await Session.findByPk(data.session_id);
+            if (existingSession) {
+                // Cập nhật session hiện có
+                return await existingSession.update({
+                    user_id: data.user_id || existingSession.user_id,
+                    ip_address: data.ip_address || existingSession.ip_address,
+                    user_agent: data.user_agent || existingSession.user_agent,
+                    status: data.status || existingSession.status
+                });
+            }
+
+            // Tạo session mới
+            return await Session.create({
+                session_id: data.session_id || uuidv4(),
+                user_id: data.user_id || null,
+                ip_address: data.ip_address || null,
+                user_agent: data.user_agent || null,
+                status: data.status || 'active'
+            });
+        } catch (error) {
+            logger.error('Error creating/updating session:', error);
+            throw error;
+        }
     },
 
     /**

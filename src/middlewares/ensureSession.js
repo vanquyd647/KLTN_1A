@@ -2,40 +2,43 @@ const sessionService = require('../services/sessionService');
 const { v4: uuidv4 } = require('uuid');
 
 const ensureSession = async (req, res, next) => {
-    let sessionId = req.headers['x-session-id']; // Check session ID in request header
+    try {
+        let sessionId = req.headers['x-session-id'];
 
-    if (!sessionId) {
-        // Generate a new session ID if not present
-        sessionId = uuidv4();
+        if (!sessionId) {
+            sessionId = uuidv4();
+            res.setHeader('x-session-id', sessionId);
+        }
 
-        // Create a new session in the database
-        await sessionService.createSession({
+        // Sử dụng createSession đã được cải tiến để handle cả create và update
+        const session = await sessionService.createSession({
             session_id: sessionId,
             ip_address: req.ip,
             user_agent: req.headers['user-agent'],
-            status: 'active',
+            status: 'active'
         });
 
-        // Add session ID to the response header
-        res.setHeader('x-session-id', sessionId);
-    } else {
-        // Check if session exists in the database
-        const sessionExists = await sessionService.getSessionById(sessionId);
-        if (!sessionExists) {
-            // Create a new session if the session ID is invalid
-            await sessionService.createSession({
-                session_id: sessionId,
-                ip_address: req.ip,
-                user_agent: req.headers['user-agent'],
-                status: 'active',
-            });
-        }
+        // Gán session vào request để sử dụng ở middleware khác
+        req.sessionId = sessionId;
+        req.session = session;
+
+        next();
+    } catch (error) {
+        logger.error('Session middleware error:', {
+            sessionId: req.headers['x-session-id'],
+            error: error.message,
+            stack: error.stack
+        });
+
+        // Tạo session mới trong trường hợp lỗi
+        const newSessionId = uuidv4();
+        res.setHeader('x-session-id', newSessionId);
+        req.sessionId = newSessionId;
+
+        // Cho phép request tiếp tục
+        next();
     }
-
-    // Attach session ID to the request for further use
-    req.sessionId = sessionId;
-
-    next();
 };
+
 
 module.exports = ensureSession;
