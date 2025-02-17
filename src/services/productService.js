@@ -2,6 +2,7 @@
 
 const { Product, Category, Color, Size, ProductCategory, ProductColor, ProductSize, ProductStock } = require('../models');
 const { sequelize } = require('../models');  // Hoặc đường dẫn đúng đến nơi cấu hình sequelize
+const elasticClient = require('../configs/elasticsearch');
 const logger = require('../configs/winston');
 const slugify = require('slugify');
 const { Op } = require('sequelize');
@@ -784,8 +785,147 @@ const productService = {
             console.error('Error deleting product:', error);
             throw error;
         }
+    },
+
+
+
+    // Thêm vào productService
+    // Trong productService object
+    async searchProductsByNameAndColor(keyword, options = {}) {
+        try {
+            const {
+                page = 1,
+                limit = 20,
+                sort = 'newest'
+            } = options;
+
+            const from = (page - 1) * limit;
+
+            // Xây dựng query
+            const body = {
+                from,
+                size: limit,
+                query: {
+                    bool: {
+                        should: [
+                            {
+                                multi_match: {
+                                    query: keyword,
+                                    fields: [
+                                        "product_name^3",
+                                        "product_name.keyword^4"
+                                    ],
+                                    type: "best_fields",
+                                    operator: "and",
+                                    fuzziness: "AUTO",
+                                    prefix_length: 2
+                                }
+                            },
+                            {
+                                nested: {
+                                    path: "productColors",
+                                    query: {
+                                        multi_match: {
+                                            query: keyword,
+                                            fields: [
+                                                "productColors.color^2",
+                                                "productColors.color.keyword^3"
+                                            ],
+                                            type: "best_fields",
+                                            operator: "and"
+                                        }
+                                    },
+                                    inner_hits: {
+                                        highlight: {
+                                            fields: {
+                                                "productColors.color": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        ],
+                        minimum_should_match: 1,
+                        filter: [
+                            { term: { status: "available" } }
+                        ]
+                    }
+                },
+                highlight: {
+                    fields: {
+                        product_name: {
+                            pre_tags: ["<strong>"],
+                            post_tags: ["</strong>"],
+                            fragment_size: 150,
+                            number_of_fragments: 3
+                        }
+                    }
+                },
+                sort: [
+                    { _score: "desc" },
+                    sort === "newest" ? { id: "desc" } : { id: "asc" }
+                ]
+            };
+
+            const response = await elasticClient.search({
+                index: 'products',
+                body
+            });
+
+            // Xử lý kết quả
+            const products = await Promise.all(response.hits.hits.map(async hit => {
+                const productId = hit._source.id;
+                const product = await Product.findByPk(productId, {
+                    include: [
+                        {
+                            model: Category,
+                            as: 'categories',
+                            attributes: ['id', 'name'],
+                            through: { attributes: [] }
+                        },
+                        {
+                            model: Color,
+                            as: 'productColors',
+                            attributes: ['id', 'color', 'hex_code'],
+                            through: { attributes: ['image'] }
+                        },
+                        {
+                            model: Size,
+                            as: 'productSizes',
+                            attributes: ['id', 'size'],
+                            through: { attributes: [] }
+                        }
+                    ]
+                });
+
+                return {
+                    ...product.toJSON(),
+                    highlights: {
+                        product_name: hit.highlight?.product_name,
+                        colors: hit.inner_hits?.productColors.hits.hits.map(colorHit => ({
+                            color: colorHit.highlight['productColors.color']
+                        }))
+                    },
+                    score: hit._score
+                };
+            }));
+
+            return {
+                products,
+                pagination: {
+                    currentPage: page,
+                    pageSize: limit,
+                    totalItems: response.hits.total.value,
+                    totalPages: Math.ceil(response.hits.total.value / limit)
+                }
+            };
+
+        } catch (error) {
+            logger.error('Lỗi tìm kiếm sản phẩm:', error);
+            throw new Error('Không thể tìm kiếm sản phẩm');
+        }
     }
-    // ... Các phương thức khác của productService
+
 };
 
 

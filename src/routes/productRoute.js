@@ -1,5 +1,5 @@
 const express = require('express');
-const {createProduct, getProducts, getProductsByPagination, getNewProductsByPagination, getNewProductsByPagination2, getFeaturedProductsByPagination, getFeaturedProductsByPagination2, getProductDetail, updateProduct, deleteProduct} = require('../controllers/productController');
+const {createProduct, getProducts, getProductsByPagination, getNewProductsByPagination, getNewProductsByPagination2, getFeaturedProductsByPagination, getFeaturedProductsByPagination2, getProductDetail, updateProduct, deleteProduct, searchProductsByNameAndColor} = require('../controllers/productController');
 const rateLimiter = require('../middlewares/rateLimiter');
 
 const router = express.Router();
@@ -272,5 +272,9 @@ router.put('/:slug', rateLimiter, updateProduct);
  *         description: Internal server error
  */
 router.delete('/:slug', rateLimiter, deleteProduct);
+
+
+router.get('/search/name-color', searchProductsByNameAndColor);
+
 
 module.exports = router;

@@ -26,6 +26,7 @@ const paymentRoute = require('./routes/paymentRoutes');
 const worker = require('./services/orderWorker');
 const initRoles = require('./scripts/initRoles');
 const initCarriers = require('./scripts/initCarriers');
+const setupElasticsearch = require('./scripts/setup-elasticsearch');
 const { updateIsNewStatus } = require('./crons/updateIsNewStatus');
 const productStockRoutes = require('./routes/productStockRoutes');
 const carrierRoutes = require('./routes/carrierRoute');
@@ -115,7 +116,6 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 // Ghi log khi server khởi động
 logger.info('🚀 Server is starting...');
 
-// Thêm vào phần khởi tạo database
 // Khởi tạo database và các bảng
 sequelize.authenticate()
     .then(() => {
@@ -127,19 +127,23 @@ sequelize.authenticate()
     })
     .then(() => {
         logger.info('✅ Tables are created or synchronized!');
-        // Khởi tạo roles sau khi database và bảng đã sẵn sàng
+        // Chạy setup Elasticsearch
+        return setupElasticsearch();
+    })
+    .then(() => {
+        logger.info('✅ Elasticsearch setup completed');
+        // Tiếp tục khởi tạo roles
         return initRoles();
     })
     .then(() => {
         logger.info('🔧 Roles initialized successfully');
-        // Khởi tạo carriers sau khi roles đã được tạo
         return initCarriers();
     })
     .then(() => {
         logger.info('🚚 Carriers initialized successfully');
     })
     .catch(err => {
-        logger.error('❌ Database error:', err);
+        logger.error('❌ Database/Setup error:', err);
     });
 
 // Kiểm tra Redis và log

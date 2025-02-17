@@ -414,6 +414,41 @@ const getFeaturedProductsByPagination2 = async (req, res) => {
     }
 };
 
+const searchProductsByNameAndColor = async (req, res) => {
+    try {
+        const { keyword, page, limit, sort } = req.query;
+
+        if (!keyword) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'Vui lòng nhập từ khóa tìm kiếm'
+            });
+        }
+
+        const results = await productService.searchProductsByNameAndColor(keyword, {
+            page: parseInt(page),
+            limit: parseInt(limit),
+            sort
+        });
+
+        return res.json({
+            code: 200,
+            status: 'success',
+            message: 'Tìm kiếm thành công',
+            data: results
+        });
+
+    } catch (error) {
+        console.error('Lỗi controller tìm kiếm:', error);
+        return res.status(500).json({
+            code: 500,
+            status: 'error',
+            message: 'Lỗi khi tìm kiếm sản phẩm'
+        });
+    }
+};
+
+
 
 module.exports = {
     createProduct,
@@ -426,4 +461,5 @@ module.exports = {
     getFeaturedProductsByPagination,
     getNewProductsByPagination2,
     getFeaturedProductsByPagination2,
+    searchProductsByNameAndColor,
 };
