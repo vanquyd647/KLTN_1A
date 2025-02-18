@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 
-const { register, verifyOtp, login, loginForAdmin, logout, getUserProfile, refreshToken, updateUserProfile } = require('../controllers/userController');
+const { register, verifyOtp, login, loginForAdmin, logout, getUserProfile, refreshToken, updateUserProfile, forgotPassword, resetPassword } = require('../controllers/userController');
 const authMiddleware = require('../middlewares/authMiddleware');
 
 /**
@@ -285,6 +285,63 @@ router.post('/refresh-token', refreshToken);
  *         description: Lỗi server
  */
 router.put('/profile', authMiddleware, updateUserProfile);
+
+/**
+ * @swagger
+ * /v1/api/users/forgot-password:
+ *   post:
+ *     summary: Gửi OTP để đặt lại mật khẩu
+ *     tags: [Users]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: OTP đã được gửi thành công
+ *       404:
+ *         description: Email không tồn tại
+ */
+router.post('/forgot-password', forgotPassword);
+
+/**
+ * @swagger
+ * /v1/api/users/reset-password:
+ *   post:
+ *     summary: Đặt lại mật khẩu với OTP
+ *     tags: [Users]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - otp
+ *               - newPassword
+ *             properties:
+ *               email:
+ *                 type: string
+ *               otp:
+ *                 type: string
+ *               newPassword:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Mật khẩu đã được cập nhật thành công
+ *       400:
+ *         description: OTP không hợp lệ
+ */
+router.post('/reset-password', resetPassword);
+
 
 
 module.exports = router;

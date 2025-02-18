@@ -199,6 +199,28 @@ const userService = {
         }
     },
 
+    async updatePassword(email, newPassword) {
+        try {
+            const user = await User.findOne({ where: { email } });
+            if (!user) {
+                throw new Error('Người dùng không tồn tại');
+            }
+
+            // Hash mật khẩu mới
+            const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+            // Cập nhật mật khẩu
+            await user.update({
+                password: hashedPassword,
+                updated_at: new Date()
+            });
+
+            return true;
+        } catch (error) {
+            logger.error(`Error updating password: ${error.message}`);
+            throw error;
+        }
+    }
 
 };
 

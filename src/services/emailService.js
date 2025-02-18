@@ -96,7 +96,72 @@ Trân trọng,
 Đội ngũ hỗ trợ.`;
 
         return this.sendMail(email, subject, text);
+    },
+
+    /**
+ * Sends a password reset OTP email to the specified recipient.
+ * 
+ * @async
+ * @function sendPasswordResetOtp
+ * @param {string} email - Recipient email address.
+ * @param {string} otp - One-time password (OTP) for password reset.
+ * @returns {Promise<boolean>} Resolves to `true` if the email is sent successfully.
+ * @throws {Error} Throws an error if email sending fails.
+ * 
+ * @example
+ * emailService.sendPasswordResetOtp('example@example.com', '123456')
+ *  .then(() => console.log('Password reset OTP sent successfully'))
+ *  .catch(error => console.error(error));
+ */
+    async sendPasswordResetOtp(email, otp) {
+        const subject = 'Đặt lại mật khẩu';
+        const html = `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #333;">Đặt lại mật khẩu</h2>
+                
+                <p>Chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản của bạn.</p>
+                
+                <div style="background-color: #f5f5f5; padding: 15px; margin: 20px 0; text-align: center;">
+                    <h3 style="color: #e74c3c; margin: 0;">Mã OTP của bạn: ${otp}</h3>
+                </div>
+                
+                <div style="background-color: #fff8dc; padding: 15px; margin: 20px 0;">
+                    <strong>Lưu ý quan trọng:</strong>
+                    <ul style="margin-top: 10px;">
+                        <li>Mã này sẽ hết hạn sau 5 phút</li>
+                        <li>Không chia sẻ mã này với bất kỳ ai</li>
+                        <li>Nếu bạn không yêu cầu đặt lại mật khẩu, vui lòng bỏ qua email này</li>
+                    </ul>
+                </div>
+                
+                <p>Nếu bạn gặp bất kỳ vấn đề gì, vui lòng liên hệ với đội ngũ hỗ trợ của chúng tôi.</p>
+                
+                <hr style="border: 1px solid #eee; margin: 20px 0;">
+                
+                <p style="color: #666; font-size: 12px;">
+                    Email này được gửi tự động, vui lòng không trả lời.
+                </p>
+            </div>
+        `;
+
+        const mailOptions = {
+            from: process.env.EMAIL_USER,
+            to: email,
+            subject,
+            html
+        };
+
+        try {
+            const info = await transporter.sendMail(mailOptions);
+            console.log('Email đặt lại mật khẩu đã được gửi:', info.response);
+            return true;
+        } catch (error) {
+            logger.error('Error sending password reset email:', error);
+            throw new Error('Không thể gửi email đặt lại mật khẩu');
+        }
     }
+
+
 };
 
 // Export all functions inside an object

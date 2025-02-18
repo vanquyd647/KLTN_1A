@@ -336,6 +336,84 @@ const updateUserProfile = async (req, res) => {
     }
 };
 
+const forgotPassword = async (req, res) => {
+    try {
+        const { email } = req.body;
+
+        // Kiểm tra email tồn tại
+        const user = await UserService.findUserByEmail(email);
+        if (!user) {
+            return res.status(404).json({
+                status: 'error',
+                code: 404,
+                message: 'Email không tồn tại trong hệ thống.',
+                data: null
+            });
+        }
+
+        // Tạo và lưu OTP
+        const otp = OtpService.generateOtp();
+        OtpService.saveOtp(email, otp);
+
+        // Gửi email chứa OTP
+        await EmailService.sendPasswordResetOtp(email, otp);
+
+        res.status(200).json({
+            status: 'success',
+            code: 200,
+            message: 'OTP đã được gửi đến email của bạn.',
+            data: null
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            status: 'error',
+            code: 500,
+            message: error.message,
+            data: null
+        });
+    }
+};
+
+const resetPassword = async (req, res) => {
+    try {
+        const { email, otp, newPassword } = req.body;
+
+        // Xác thực OTP
+        const isValidOtp = OtpService.verifyOtp(email, otp);
+        if (!isValidOtp) {
+            return res.status(400).json({
+                status: 'error',
+                code: 400,
+                message: 'OTP không hợp lệ hoặc đã hết hạn.',
+                data: null
+            });
+        }
+
+        // Cập nhật mật khẩu mới
+        await UserService.updatePassword(email, newPassword);
+
+        // Xóa OTP đã sử dụng
+        OtpService.clearOtp(email);
+
+        res.status(200).json({
+            status: 'success',
+            code: 200,
+            message: 'Mật khẩu đã được cập nhật thành công.',
+            data: null
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            status: 'error',
+            code: 500,
+            message: error.message,
+            data: null
+        });
+    }
+};
+
+
 
 module.exports = {
     register,
@@ -346,4 +424,6 @@ module.exports = {
     logout,
     getUserProfile,
     updateUserProfile,
+    forgotPassword,
+    resetPassword,
 };
