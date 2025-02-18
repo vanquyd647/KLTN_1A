@@ -9,8 +9,11 @@ module.exports = (sequelize) => {
             autoIncrement: true,
         },
         phone: {
-            type: DataTypes.INTEGER,
+            type: DataTypes.STRING, // Đổi thành STRING để giữ nguyên số 0
             allowNull: false,
+            validate: {
+                is: /^[0-9]{10}$/ // Validate đúng 10 chữ số
+            }
         },
         email: {
             type: DataTypes.STRING,

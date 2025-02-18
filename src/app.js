@@ -75,10 +75,24 @@ app.use(morganFormat);
 
 // Cấu hình CORS
 const corsOptions = {
-    origin: ['http://localhost:3000', 'https://kltn-1-b.vercel.app'],
+    origin: [
+        'http://localhost:3000',
+        'http://localhost:5173',
+        'https://kltn-1-b.vercel.app',
+        'https://*.ngrok.io',
+        'https://*.ngrok-free.app'
+    ],
     methods: 'GET, POST, PUT, DELETE',
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-session-id'],
+    allowedHeaders: [
+        'Content-Type',
+        'Authorization',
+        'x-session-id',
+        'ngrok-skip-browser-warning'  
+    ],
     exposedHeaders: ['x-session-id'],
+    credentials: true,
+    preflightContinue: false,
+    optionsSuccessStatus: 204
 };
 
 // Bảo mật với Helmet
@@ -103,6 +117,7 @@ app.use(helmet({
 }));
 
 // Middleware
+app.set('trust proxy', 1);
 app.use(cookieParser());
 app.use(rateLimiter);
 app.use(ensureSession);

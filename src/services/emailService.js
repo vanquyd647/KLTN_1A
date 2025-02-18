@@ -86,17 +86,55 @@ const emailService = {
      */
     async sendOtpEmail(email, otp) {
         const subject = 'Mã OTP của bạn';
-        const text = `Xin chào,
-
-Mã OTP của bạn là: ${otp}
-
-Mã này sẽ hết hạn sau 5 phút. Nếu bạn không yêu cầu mã OTP, vui lòng bỏ qua email này.
-
-Trân trọng,
-Đội ngũ hỗ trợ.`;
-
-        return this.sendMail(email, subject, text);
-    },
+        const html = `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
+                <h2 style="color: #2c3e50; text-align: center;">Mã Xác Thực OTP</h2>
+                
+                <p style="font-size: 16px; color: #333;">Xin chào,</p>
+                
+                <p style="font-size: 16px; color: #333;">Mã OTP của bạn để xác thực là:</p>
+                
+                <div style="background-color: #f8f9fa; padding: 15px; text-align: center; border-radius: 5px; border: 1px dashed #007bff;">
+                    <h3 style="color: #e74c3c; font-size: 24px; margin: 0;">${otp}</h3>
+                </div>
+    
+                <p style="font-size: 14px; color: #555;">Mã này có hiệu lực trong <strong>5 phút</strong>. Vui lòng không chia sẻ mã này với bất kỳ ai.</p>
+    
+                <div style="background-color: #fff8dc; padding: 15px; margin: 20px 0; border-radius: 5px;">
+                    <strong>Lưu ý quan trọng:</strong>
+                    <ul style="margin-top: 10px; padding-left: 20px; color: #555;">
+                        <li>Không chia sẻ mã OTP với bất kỳ ai</li>
+                        <li>Nếu bạn không yêu cầu mã này, hãy bỏ qua email</li>
+                        <li>Mã sẽ hết hạn sau 5 phút</li>
+                    </ul>
+                </div>
+    
+                <p style="font-size: 14px; color: #555;">Nếu bạn gặp vấn đề, vui lòng liên hệ với đội ngũ hỗ trợ.</p>
+    
+                <hr style="border: 1px solid #eee; margin: 20px 0;">
+    
+                <p style="color: #888; font-size: 12px; text-align: center;">
+                    Email này được gửi tự động, vui lòng không trả lời.
+                </p>
+            </div>
+        `;
+    
+        const mailOptions = {
+            from: process.env.EMAIL_USER,
+            to: email,
+            subject,
+            html
+        };
+    
+        try {
+            const info = await transporter.sendMail(mailOptions);
+            console.log('Email OTP đã được gửi:', info.response);
+            return true;
+        } catch (error) {
+            logger.error('Lỗi khi gửi email OTP:', error);
+            throw new Error('Không thể gửi email OTP');
+        }
+    },  
 
     /**
  * Sends a password reset OTP email to the specified recipient.

@@ -287,11 +287,11 @@ const updateUserProfile = async (req, res) => {
         // Validate dữ liệu đầu vào
         const { firstname, lastname, phone, gender } = updateData;
 
-        if (phone && !/^\d{10}$/.test(phone)) {
+        if (phone && !/^0\d{9}$/.test(phone)) { // Thêm kiểm tra số 0 ở đầu
             return res.status(400).json({
                 status: 'error',
                 code: 400,
-                message: 'Số điện thoại không hợp lệ',
+                message: 'Số điện thoại không hợp lệ. Phải bắt đầu bằng số 0 và có 10 chữ số',
                 data: null
             });
         }

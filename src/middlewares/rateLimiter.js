@@ -11,6 +11,7 @@ const rateLimiter = rateLimit({
     standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
     legacyHeaders: false, // Disable the `X-RateLimit-*` headers
     message: 'Too many requests from this IP, please try again later.',
+    trustProxy: true
 });
 
 module.exports = rateLimiter;
