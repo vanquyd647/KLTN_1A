@@ -7,7 +7,6 @@ const logger = require('../configs/winston');
 const slugify = require('slugify');
 const { Op } = require('sequelize');
 
-
 const productService = {
 
     /**
@@ -787,8 +786,6 @@ const productService = {
         }
     },
 
-
-
     // Thêm vào productService
     // Trong productService object
     async searchProductsByNameAndColor(keyword, options = {}) {
@@ -927,6 +924,5 @@ const productService = {
     }
 
 };
-
 
 module.exports = productService;

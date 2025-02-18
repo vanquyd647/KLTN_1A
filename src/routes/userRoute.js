@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 
-const {register, verifyOtp, login, loginForAdmin, logout, getUserProfile, refreshToken} = require('../controllers/userController');
+const { register, verifyOtp, login, loginForAdmin, logout, getUserProfile, refreshToken, updateUserProfile } = require('../controllers/userController');
 const authMiddleware = require('../middlewares/authMiddleware');
 
 /**
@@ -228,5 +228,63 @@ router.get('/profile', authMiddleware, getUserProfile);
  *         description: Invalid or expired refresh token
  */
 router.post('/refresh-token', refreshToken);
+
+/**
+ * @swagger
+ * /v1/api/users/profile:
+ *   put:
+ *     summary: Cập nhật thông tin người dùng
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               firstname:
+ *                 type: string
+ *                 description: Tên
+ *               lastname:
+ *                 type: string
+ *                 description: Họ
+ *               phone:
+ *                 type: string
+ *                 description: Số điện thoại (10 số)
+ *                 pattern: '^[0-9]{10}$'
+ *               gender:
+ *                 type: string
+ *                 enum: [male, female, other]
+ *                 description: Giới tính
+ *     responses:
+ *       200:
+ *         description: Cập nhật thông tin thành công
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 code:
+ *                   type: integer
+ *                   example: 200
+ *                 message:
+ *                   type: string
+ *                   example: Cập nhật thông tin thành công!
+ *                 data:
+ *                   $ref: '#/components/schemas/User'
+ *       400:
+ *         description: Dữ liệu không hợp lệ
+ *       401:
+ *         description: Chưa xác thực
+ *       500:
+ *         description: Lỗi server
+ */
+router.put('/profile', authMiddleware, updateUserProfile);
+
 
 module.exports = router;

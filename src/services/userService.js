@@ -61,7 +61,7 @@ const userService = {
      */
     async authenticateUser(email, password) {
         // Tìm user và tất cả cart active
-        const user = await User.findOne({ 
+        const user = await User.findOne({
             where: { email },
             include: [{
                 model: Cart,
@@ -69,19 +69,19 @@ const userService = {
                 required: false
             }]
         });
-    
+
         if (!user) {
             logger.error('User not found');
             throw new Error('User not found');
         }
-    
+
         const isPasswordValid = await bcrypt.compare(password, user.password);
-    
+
         if (!isPasswordValid) {
             logger.error('Invalid password');
             throw new Error('Invalid password');
         }
-    
+
         // Kiểm tra và xử lý cart
         let cart;
         if (user.Carts && user.Carts.length > 0) {
@@ -89,12 +89,12 @@ const userService = {
             cart = user.Carts.reduce((newest, current) => {
                 return new Date(current.created_at) > new Date(newest.created_at) ? current : newest;
             });
-            
+
             // Optional: Vô hiệu hóa các cart active cũ
             await Cart.update(
                 { status: 'inactive' },
-                { 
-                    where: { 
+                {
+                    where: {
                         user_id: user.id,
                         status: 'active',
                         id: { [Op.ne]: cart.id }
@@ -108,7 +108,7 @@ const userService = {
                 status: 'active'
             });
         }
-    
+
         // Tạo response object
         const userResponse = {
             id: user.id,
@@ -119,10 +119,10 @@ const userService = {
             gender: user.gender,
             cart_id: cart.id
         };
-    
+
         return userResponse;
-    },    
-    
+    },
+
     /**
      * Get user by ID
      * @async
@@ -152,7 +152,54 @@ const userService = {
 
         // Return the list of role names
         return roles.map((userRole) => userRole.role.role_name);
-    }
+    },
+
+    /**
+ * Update user information
+ * @async
+ * @param {number} userId - ID of the user
+ * @param {Object} updateData - Data to update
+ * @returns {Promise<Object>} - Updated user
+ */
+    async updateUser(userId, updateData) {
+        try {
+            const user = await User.findByPk(userId);
+
+            if (!user) {
+                throw new Error('Người dùng không tồn tại');
+            }
+
+            // Lọc các trường được phép cập nhật
+            const allowedFields = ['firstname', 'lastname', 'phone', 'gender'];
+            const filteredData = Object.keys(updateData)
+                .filter(key => allowedFields.includes(key))
+                .reduce((obj, key) => {
+                    obj[key] = updateData[key];
+                    return obj;
+                }, {});
+
+            // Cập nhật thông tin
+            await user.update({
+                ...filteredData,
+                updated_at: new Date()
+            });
+
+            return {
+                id: user.id,
+                firstname: user.firstname,
+                lastname: user.lastname,
+                email: user.email,
+                phone: user.phone,
+                gender: user.gender,
+                updated_at: user.updated_at
+            };
+        } catch (error) {
+            logger.error(`Error updating user: ${error.message}`);
+            throw error;
+        }
+    },
+
+
 };
 
 // Export all functions inside an object

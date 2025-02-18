@@ -279,6 +279,64 @@ const getUserProfile = async (req, res) => {
     }
 };
 
+const updateUserProfile = async (req, res) => {
+    const userId = req.userId; // Lấy từ middleware xác thực
+    const updateData = req.body;
+
+    try {
+        // Validate dữ liệu đầu vào
+        const { firstname, lastname, phone, gender } = updateData;
+
+        if (phone && !/^\d{10}$/.test(phone)) {
+            return res.status(400).json({
+                status: 'error',
+                code: 400,
+                message: 'Số điện thoại không hợp lệ',
+                data: null
+            });
+        }
+
+        if (gender && !['male', 'female', 'other'].includes(gender)) {
+            return res.status(400).json({
+                status: 'error',
+                code: 400,
+                message: 'Giới tính không hợp lệ',
+                data: null
+            });
+        }
+
+        // Cập nhật thông tin người dùng
+        const updatedUser = await UserService.updateUser(userId, updateData);
+
+        // Xóa cache profile cũ
+        await redisClient.del(`user:${userId}:profile`);
+
+        // Cập nhật cache mới
+        await redisClient.set(
+            `user:${userId}:profile`,
+            JSON.stringify(updatedUser),
+            { EX: 3600 }
+        );
+
+        return res.status(200).json({
+            status: 'success',
+            code: 200,
+            message: 'Cập nhật thông tin thành công!',
+            data: updatedUser
+        });
+
+    } catch (error) {
+        console.error('Error updating user profile:', error);
+        return res.status(500).json({
+            status: 'error',
+            code: 500,
+            message: 'Lỗi hệ thống, vui lòng thử lại sau!',
+            data: null
+        });
+    }
+};
+
+
 module.exports = {
     register,
     verifyOtp,
@@ -286,5 +344,6 @@ module.exports = {
     loginForAdmin,
     refreshToken,
     logout,
-    getUserProfile
+    getUserProfile,
+    updateUserProfile,
 };
