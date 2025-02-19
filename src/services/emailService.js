@@ -50,12 +50,14 @@ const emailService = {
      *  .then(() => console.log('Email sent successfully'))
      *  .catch(error => console.error(error));
      */
-    async sendMail(to, subject, text) {
+    // Sửa lại phương thức sendMail
+    async sendMail(to, subject, text, html) { // Thêm tham số html
         const mailOptions = {
-            from: process.env.EMAIL_USER, // Sender email address
-            to, // Recipient email address
-            subject, // Email subject
-            text // Email body (plain text)
+            from: process.env.EMAIL_USER,
+            to,
+            subject,
+            text,
+            html // Thêm html vào mailOptions
         };
 
         try {
@@ -118,14 +120,14 @@ const emailService = {
                 </p>
             </div>
         `;
-    
+
         const mailOptions = {
             from: process.env.EMAIL_USER,
             to: email,
             subject,
             html
         };
-    
+
         try {
             const info = await transporter.sendMail(mailOptions);
             console.log('Email OTP đã được gửi:', info.response);
@@ -134,7 +136,7 @@ const emailService = {
             logger.error('Lỗi khi gửi email OTP:', error);
             throw new Error('Không thể gửi email OTP');
         }
-    },  
+    },
 
     /**
  * Sends a password reset OTP email to the specified recipient.
