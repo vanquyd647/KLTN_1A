@@ -3,8 +3,10 @@ const { createClient } = require('redis');
 
 // 🔥 Kết nối Redis Cache (Không còn dùng mặc định 127.0.0.1:6379)
 const redisClient = createClient({
-    url: process.env.REDIS_URL,  
-    password: process.env.REDIS_PASSWORD
+    socket: {
+        host: '127.0.0.1', 
+        port: 6380
+    }
 });
 
 redisClient.on('connect', () => console.log('✅ Kết nối Redis Cache thành công!'));

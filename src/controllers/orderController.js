@@ -7,8 +7,10 @@ const { Op } = require('sequelize');
 const { createClient } = require('redis');
 
 const redisClient = createClient({
-    url: process.env.REDIS_URL2,
-    password: process.env.REDIS_PASSWORD2
+    socket: {
+        host: '127.0.0.1', 
+        port: 6381
+    }
 });
 
 redisClient.on('connect', () => console.log('✅ Kết nối Redis thành công trong OrderController!'));

@@ -8,8 +8,10 @@ require('dotenv').config();
 
 // 🔥 Kết nối Redis
 const redisQueueClient = createClient({
-    url: process.env.REDIS_URL2,
-    password: process.env.REDIS_PASSWORD2
+    socket: {
+        host: '127.0.0.1', 
+        port: 6381
+    }
 });
 
 redisQueueClient.on('connect', () => console.log('✅ Kết nối Redis Queue thành công!'));
@@ -26,9 +28,8 @@ redisQueueClient.on('error', (err) => console.error('❌ Lỗi Redis Queue:', er
 // 🔥 Khởi tạo hàng đợi đơn hàng
 const orderQueue = new Queue('orderQueue', {
     connection: {
-        host: process.env.REDIS_URL2.split('//')[1].split(':')[0],
-        port: process.env.REDIS_URL2.split(':')[2] || 6379,
-        password: process.env.REDIS_PASSWORD2
+        host: '127.0.0.1',
+        port: 6381,
     }
 });
 
