@@ -26,6 +26,7 @@ const defineReview = require('./Review');
 const definePaymentLog = require('./PaymentLog');
 const defineCarrier = require('./Carrier');
 const defineRevenue = require('./Revenue');
+const defineFavorite = require('./Favorite');
 
 
 const models = {
@@ -54,6 +55,7 @@ const models = {
     PaymentLog: definePaymentLog(sequelize),
     Carrier: defineCarrier(sequelize),
     Revenue: defineRevenue(sequelize),
+    Favorite: defineFavorite(sequelize),
 
 };
 
@@ -83,6 +85,7 @@ const {
     PaymentLog,
     Carrier,
     Revenue,
+    Favorite,
 } = models;
 
 // Các quan hệ giữa các mô hình
@@ -230,6 +233,26 @@ Order.hasOne(Revenue, {
 Payment.hasOne(Revenue, {
     foreignKey: 'payment_id',
     as: 'revenue'
+});
+
+// Quan hệ giữa User và Favorite
+User.hasMany(models.Favorite, {
+    foreignKey: 'user_id',
+    as: 'favorites'
+});
+Favorite.belongsTo(User, {
+    foreignKey: 'user_id',
+    as: 'user'
+});
+
+// Quan hệ giữa Product và Favorite 
+Product.hasMany(models.Favorite, {
+    foreignKey: 'product_id',
+    as: 'favorites'
+});
+Favorite.belongsTo(Product, {
+    foreignKey: 'product_id',
+    as: 'product'
 });
 
 

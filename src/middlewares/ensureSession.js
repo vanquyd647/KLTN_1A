@@ -1,5 +1,6 @@
 const sessionService = require('../services/sessionService');
 const { v4: uuidv4 } = require('uuid');
+const logger = require('../configs/winston');
 
 const ensureSession = async (req, res, next) => {
     try {
@@ -24,17 +25,6 @@ const ensureSession = async (req, res, next) => {
 
         next();
     } catch (error) {
-        logger.error('Session middleware error:', {
-            sessionId: req.headers['x-session-id'],
-            error: error.message,
-            stack: error.stack
-        });
-
-        // Tạo session mới trong trường hợp lỗi
-        const newSessionId = uuidv4();
-        res.setHeader('x-session-id', newSessionId);
-        req.sessionId = newSessionId;
-
         // Cho phép request tiếp tục
         next();
     }
