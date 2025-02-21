@@ -60,6 +60,7 @@ class FavoriteService {
             const offset = (page - 1) * limit;
 
             const { count, rows } = await Favorite.findAndCountAll({
+                distinct: true,
                 where: whereCondition,
                 include: [{
                     model: Product,
