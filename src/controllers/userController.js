@@ -9,15 +9,28 @@ const redisClient = require('../configs/redisClient');
 const userStore = new Map();
 
 // Đăng ký người dùng mới (gửi OTP và lưu tạm thông tin)
+// Trong userController.js
 const register = async (req, res) => {
     try {
         const { firstname, lastname, email, phone, gender, password, role } = req.body;
 
+        // Kiểm tra các trường bắt buộc
         if (!firstname || !lastname || !email || !phone || !gender || !password) {
             return res.status(400).json({
                 status: 'error',
                 code: 400,
                 message: 'Tất cả các trường thông tin đều bắt buộc.',
+                data: null,
+            });
+        }
+
+        // Thêm kiểm tra email đã tồn tại
+        const existingUser = await UserService.findUserByEmail(email);
+        if (existingUser) {
+            return res.status(400).json({
+                status: 'error',
+                code: 400,
+                message: 'Email này đã được đăng ký. Vui lòng sử dụng email khác.',
                 data: null,
             });
         }
@@ -47,6 +60,7 @@ const register = async (req, res) => {
         });
     }
 };
+
 
 const verifyOtp = async (req, res) => {
     try {

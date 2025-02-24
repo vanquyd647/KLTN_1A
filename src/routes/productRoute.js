@@ -273,8 +273,119 @@ router.put('/:slug', rateLimiter, updateProduct);
  */
 router.delete('/:slug', rateLimiter, deleteProduct);
 
-
+/**
+ * @swagger
+ * /v1/api/products/search/name-color:
+ *   get:
+ *     summary: Tìm kiếm sản phẩm theo tên và màu sắc
+ *     tags: [Products]
+ *     parameters:
+ *       - in: query
+ *         name: keyword
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: Từ khóa tìm kiếm (tên sản phẩm hoặc màu sắc)
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Số trang
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *         description: Số lượng sản phẩm trên mỗi trang
+ *       - in: query
+ *         name: sort
+ *         schema:
+ *           type: string
+ *           enum: [newest, oldest]
+ *           default: newest
+ *         description: Sắp xếp kết quả (mới nhất hoặc cũ nhất)
+ *     responses:
+ *       200:
+ *         description: Tìm kiếm thành công
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 products:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: integer
+ *                       product_name:
+ *                         type: string
+ *                       price:
+ *                         type: number
+ *                       discount_price:
+ *                         type: number
+ *                       status:
+ *                         type: string
+ *                       categories:
+ *                         type: array
+ *                         items:
+ *                           type: object
+ *                           properties:
+ *                             id:
+ *                               type: integer
+ *                             name:
+ *                               type: string
+ *                       productColors:
+ *                         type: array
+ *                         items:
+ *                           type: object
+ *                           properties:
+ *                             id:
+ *                               type: integer
+ *                             color:
+ *                               type: string
+ *                             hex_code:
+ *                               type: string
+ *                             image:
+ *                               type: string
+ *                       highlights:
+ *                         type: object
+ *                         properties:
+ *                           product_name:
+ *                             type: array
+ *                             items:
+ *                               type: string
+ *                           colors:
+ *                             type: array
+ *                             items:
+ *                               type: object
+ *                               properties:
+ *                                 color:
+ *                                   type: array
+ *                                   items:
+ *                                     type: string
+ *                       score:
+ *                         type: number
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     currentPage:
+ *                       type: integer
+ *                     pageSize:
+ *                       type: integer
+ *                     totalItems:
+ *                       type: integer
+ *                     totalPages:
+ *                       type: integer
+ *       400:
+ *         description: Thiếu từ khóa tìm kiếm
+ *       500:
+ *         description: Lỗi server
+ */
 router.get('/search/name-color', searchProductsByNameAndColor);
+
 
 
 module.exports = router;
