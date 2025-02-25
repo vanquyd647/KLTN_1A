@@ -717,29 +717,175 @@ const productService = {
         const t = await sequelize.transaction();
 
         try {
-            const product = await Product.findOne({ where: { slug }, transaction: t });
+            // 1. Tìm và kiểm tra sản phẩm tồn tại
+            const product = await Product.findOne({
+                where: { slug },
+                include: [
+                    { model: Category, as: 'categories' },
+                    { model: Color, as: 'productColors' },
+                    { model: Size, as: 'productSizes' },
+                    { model: ProductStock }
+                ],
+                transaction: t
+            });
 
             if (!product) throw new Error('Sản phẩm không tồn tại');
 
-            // Cập nhật thông tin sản phẩm
-            product.product_name = productData.product_name || product.product_name;
-            product.description = productData.description || product.description;
-            product.price = productData.price || product.price;
-            product.discount_price = productData.discount_price || product.discount_price;
-            product.is_featured = productData.is_featured !== undefined ? productData.is_featured : product.is_featured;
-            product.status = productData.status || product.status;
+            // 2. Cập nhật thông tin cơ bản của sản phẩm
+            const updatedProduct = await product.update({
+                product_name: productData.product_name || product.product_name,
+                description: productData.description || product.description,
+                price: productData.price || product.price,
+                discount_price: productData.discount_price || product.discount_price,
+                is_new: productData.is_new !== undefined ? productData.is_new : product.is_new,
+                is_featured: productData.is_featured !== undefined ? productData.is_featured : product.is_featured,
+                status: productData.status || product.status,
+            }, { transaction: t });
 
-            await product.save({ transaction: t });
+            // 3. Cập nhật slug nếu tên sản phẩm thay đổi
+            if (productData.product_name) {
+                const newSlug = this.generateSlug(productData.product_name, product.id);
+                await updatedProduct.update({ slug: newSlug }, { transaction: t });
+            }
 
-            // Xử lý các thay đổi khác (danh mục, màu sắc, kích thước, tồn kho) ở đây
+            // 4. Cập nhật danh mục
+            if (productData.categories) {
+                // Xóa các liên kết danh mục cũ
+                await ProductCategory.destroy({
+                    where: { product_id: product.id },
+                    transaction: t
+                });
 
-            // Cam kết giao dịch
+                // Thêm các danh mục mới
+                for (const categoryName of productData.categories) {
+                    const [category] = await Category.findOrCreate({
+                        where: { name: categoryName },
+                        defaults: { name: categoryName, description: '' },
+                        transaction: t,
+                    });
+                    await ProductCategory.create({
+                        product_id: product.id,
+                        category_id: category.id,
+                    }, { transaction: t });
+                }
+            }
+
+            // 5. Cập nhật màu sắc và hình ảnh
+            if (productData.colors) {
+                // Xóa các liên kết màu cũ
+                await ProductColor.destroy({
+                    where: { product_id: product.id },
+                    transaction: t
+                });
+
+                // Thêm các màu mới
+                for (const colorData of productData.colors) {
+                    const [color] = await Color.findOrCreate({
+                        where: { color: colorData.color },
+                        defaults: {
+                            color: colorData.color,
+                            hex_code: colorData.hex_code || null
+                        },
+                        transaction: t,
+                    });
+                    await ProductColor.create({
+                        product_id: product.id,
+                        color_id: color.id,
+                        image: colorData.image || null,
+                    }, { transaction: t });
+                }
+            }
+
+            // 6. Cập nhật kích thước
+            if (productData.sizes) {
+                // Xóa các liên kết kích thước cũ
+                await ProductSize.destroy({
+                    where: { product_id: product.id },
+                    transaction: t
+                });
+
+                // Thêm các kích thước mới
+                for (const sizeName of productData.sizes) {
+                    const [size] = await Size.findOrCreate({
+                        where: { size: sizeName },
+                        defaults: { size: sizeName },
+                        transaction: t,
+                    });
+                    await ProductSize.create({
+                        product_id: product.id,
+                        size_id: size.id,
+                    }, { transaction: t });
+                }
+            }
+
+            // 7. Cập nhật thông tin tồn kho
+            if (productData.stock && productData.stock.length > 0) {
+                // Xóa thông tin tồn kho cũ
+                await ProductStock.destroy({
+                    where: { product_id: product.id },
+                    transaction: t
+                });
+
+                // Thêm thông tin tồn kho mới
+                for (const stock of productData.stock) {
+                    const { size, color, quantity } = stock;
+                    const sizeRecord = await Size.findOne({
+                        where: { size },
+                        transaction: t
+                    });
+                    const colorRecord = await Color.findOne({
+                        where: { color },
+                        transaction: t
+                    });
+
+                    if (sizeRecord && colorRecord) {
+                        await ProductStock.create({
+                            product_id: product.id,
+                            size_id: sizeRecord.id,
+                            color_id: colorRecord.id,
+                            quantity: quantity,
+                        }, { transaction: t });
+                    }
+                }
+            }
+
+            // 8. Lấy sản phẩm đã cập nhật với đầy đủ thông tin
+            const updatedProductWithDetails = await Product.findOne({
+                where: { id: product.id },
+                include: [
+                    {
+                        model: Category,
+                        as: 'categories',
+                        attributes: ['id', 'name'],
+                        through: { attributes: [] },
+                    },
+                    {
+                        model: Color,
+                        as: 'productColors',
+                        attributes: ['id', 'color', 'hex_code'],
+                        through: { attributes: ['image'] },
+                    },
+                    {
+                        model: Size,
+                        as: 'productSizes',
+                        attributes: ['id', 'size'],
+                        through: { attributes: [] },
+                    },
+                    {
+                        model: ProductStock,
+                    },
+                ],
+                transaction: t
+            });
+
+            // Commit transaction
             await t.commit();
-            return product;
+            return updatedProductWithDetails;
+
         } catch (error) {
+            // Rollback nếu có lỗi
             await t.rollback();
             logger.error('Error updating product:', error);
-            console.error('Error updating product:', error);
             throw error;
         }
     },

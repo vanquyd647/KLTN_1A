@@ -83,4 +83,31 @@ const productStockController = require('../controllers/productStockController');
  */
 router.get('/', productStockController.getProductStocks);
 
+/**
+ * @swagger
+ * /v1/api/product-stocks/{id}:
+ *   put:
+ *     summary: Cập nhật số lượng tồn kho theo ID
+ *     tags: [ProductStocks]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID của bản ghi tồn kho
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               quantity:
+ *                 type: integer
+ *                 minimum: 0
+ *                 description: Số lượng mới
+ */
+router.put('/:id', productStockController.updateStock);
+
 module.exports = router;

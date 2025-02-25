@@ -9,8 +9,30 @@ const createProduct = async (req, res) => {
         const productData = req.body;
 
         const newProduct = await productService.createProduct(productData);
-        // Xóa cache Redis sau khi thêm sản phẩm mới
-        await redisClient.del('products'); // Xóa cache của sản phẩm
+
+        // Xóa tất cả cache liên quan
+        const deleteKeys = [
+            'product_stocks', // Cache cho tồn kho sản phẩm
+            'products', // Cache cho danh sách sản phẩm
+            `product_${newProduct[0].slug}`, // Cache cho chi tiết sản phẩm
+        ];
+
+        // Xóa cache cho các trang phân trang
+        const pages = Array.from({ length: 10 }, (_, i) => i + 1); // Giả sử có 10 trang
+        const limits = [5, 10, 20, 50]; // Các limit phổ biến
+
+        pages.forEach(page => {
+            limits.forEach(limit => {
+                deleteKeys.push(
+                    `products_page_${page}_limit_${limit}`,
+                    `new_products_page_${page}_limit_${limit}`,
+                    `featured_products_page_${page}_limit_${limit}`
+                );
+            });
+        });
+
+        // Xóa tất cả các key cache
+        await Promise.all(deleteKeys.map(key => redisClient.del(key)));
         return res.status(201).json({
             status: 'success',
             code: 201,
@@ -153,6 +175,28 @@ const updateProduct = async (req, res) => {
 
         // Xóa cache sản phẩm cũ trong Redis để khi truy vấn lại sẽ lấy dữ liệu mới
         redisClient.del(`product_${slug}`);
+        // Xóa tất cả cache liên quan
+        const deleteKeys = [
+            'product_stocks', // Cache cho tồn kho sản phẩm
+            'products', // Cache cho danh sách sản phẩm
+        ];
+
+        // Xóa cache cho các trang phân trang
+        const pages = Array.from({ length: 10 }, (_, i) => i + 1); // Giả sử có 10 trang
+        const limits = [5, 10, 20, 50]; // Các limit phổ biến
+
+        pages.forEach(page => {
+            limits.forEach(limit => {
+                deleteKeys.push(
+                    `products_page_${page}_limit_${limit}`,
+                    `new_products_page_${page}_limit_${limit}`,
+                    `featured_products_page_${page}_limit_${limit}`
+                );
+            });
+        });
+
+        // Xóa tất cả các key cache
+        await Promise.all(deleteKeys.map(key => redisClient.del(key)));
 
         return res.status(200).json({
             status: 'success',

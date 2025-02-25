@@ -39,6 +39,39 @@ class ProductStockController {
             });
         }
     }
+
+    async updateStock(req, res) {
+        try {
+            const stockId = req.params.id;
+            const stockData = req.body;
+
+            // Validate dữ liệu đầu vào
+            if (typeof stockData.quantity !== 'number' || stockData.quantity < 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Số lượng không hợp lệ'
+                });
+            }
+
+            // Thêm id từ params vào stockData
+            const updatedStock = await productStockService.updateProductStock({
+                id: stockId,
+                ...stockData
+            });
+
+            res.json({
+                success: true,
+                message: 'Cập nhật tồn kho thành công',
+                data: updatedStock
+            });
+        } catch (error) {
+            res.status(500).json({
+                success: false,
+                message: error.message
+            });
+        }
+    }
+
 }
 
 module.exports = new ProductStockController();
