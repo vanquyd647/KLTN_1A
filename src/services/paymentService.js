@@ -314,6 +314,115 @@ const PaymentService = {
         }
     },
 
+    // Thêm vào PaymentService object
+    updatePaymentStatus: async (orderId, paymentMethod, paymentStatus) => {
+        const t = await sequelize.transaction();
+
+        try {
+            // Validate payment method
+            const validPaymentMethods = ['payos', 'cash_on_delivery'];
+            if (!validPaymentMethods.includes(paymentMethod)) {
+                throw new Error('Phương thức thanh toán không hợp lệ');
+            }
+
+            // Validate payment status
+            const validPaymentStatuses = ['pending', 'processing', 'paid', 'cancelled'];
+            if (!validPaymentStatuses.includes(paymentStatus)) {
+                throw new Error('Trạng thái thanh toán không hợp lệ');
+            }
+
+            // Update payment record
+            const [updateCount] = await Payment.update({
+                payment_method: paymentMethod,
+                payment_status: paymentStatus,
+                payment_date: paymentStatus === 'paid' ? new Date() : null,
+                updated_at: new Date()
+            }, {
+                where: { order_id: orderId },
+                transaction: t
+            });
+
+            if (updateCount === 0) {
+                throw new Error(`Không tìm thấy payment với order_id: ${orderId}`);
+            }
+
+            // Map payment status sang payment log status
+            let logStatus;
+            switch (paymentStatus) {
+                case 'paid':
+                    logStatus = 'success';
+                    break;
+                case 'cancelled':
+                    logStatus = 'cancelled';
+                    break;
+                case 'pending':
+                    logStatus = 'pending';
+                    break;
+                case 'processing':
+                    logStatus = 'initiated';
+                    break;
+                default:
+                    logStatus = 'pending';
+            }
+
+            // Create payment log với logStatus đã được map
+            await PaymentLog.create({
+                order_id: orderId,
+                status: logStatus,
+                created_at: new Date()
+            }, { transaction: t });
+
+            // Update order status based on payment status
+            let orderStatus;
+            if (paymentStatus === 'paid') {
+                orderStatus = 'shipping';
+            } else if (paymentStatus === 'cancelled') {
+                orderStatus = 'cancelled';
+            } else {
+                orderStatus = 'in_payment';
+            }
+
+            await Order.update({
+                status: orderStatus,
+                updated_at: new Date()
+            }, {
+                where: { id: orderId },
+                transaction: t
+            });
+
+            await t.commit();
+
+            logger.info("✅ Payment status updated successfully:", {
+                orderId,
+                paymentMethod,
+                paymentStatus,
+                orderStatus,
+                logStatus
+            });
+
+            return {
+                success: true,
+                order_id: orderId,
+                payment_method: paymentMethod,
+                payment_status: paymentStatus,
+                order_status: orderStatus
+            };
+
+        } catch (error) {
+            await t.rollback();
+
+            logger.error("❌ Payment status update failed:", {
+                error: error.message,
+                stack: error.stack,
+                orderId,
+                paymentMethod,
+                paymentStatus
+            });
+
+            throw new Error(`Lỗi cập nhật trạng thái thanh toán: ${error.message}`);
+        }
+    },
+
 
 
 };

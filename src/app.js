@@ -85,7 +85,7 @@ const corsOptions = {
         'https://*.ngrok.io',
         'https://*.ngrok-free.app'
     ],
-    methods: 'GET, POST, PUT, DELETE',
+    methods: 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
     allowedHeaders: [
         'Content-Type',
         'Authorization',

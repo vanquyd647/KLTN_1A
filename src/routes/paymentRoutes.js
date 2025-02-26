@@ -17,4 +17,6 @@ router.post("/payos-webhook", paymentController.handlePayOSWebhook);
  */
 router.post("/cod", paymentController.createCODPayment);
 
+router.put("/update-status", paymentController.updatePaymentStatus);
+
 module.exports = router;

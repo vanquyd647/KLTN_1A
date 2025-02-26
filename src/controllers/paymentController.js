@@ -20,13 +20,13 @@ class PaymentController {
                 code: "00",
                 status: "SUCCESS",
                 message: "Tạo thanh toán PayOS thành công",
-                checkoutUrl 
+                checkoutUrl
             });
         } catch (error) {
             console.error("❌ Lỗi tạo thanh toán với PayOS:", error);
             return res.status(500).json({
                 code: "99",
-                status: "ERROR", 
+                status: "ERROR",
                 message: "Lỗi tạo thanh toán với PayOS",
                 data: null
             });
@@ -81,6 +81,42 @@ class PaymentController {
                 code: "99",
                 status: "ERROR",
                 message: "Lỗi tạo thanh toán COD",
+                data: null
+            });
+        }
+    }
+
+    async updatePaymentStatus(req, res) {
+        const { order_id, payment_method, payment_status } = req.body;
+
+        if (!order_id || !payment_method || !payment_status) {
+            return res.status(400).json({
+                code: "01",
+                status: "BAD_REQUEST",
+                message: "Thiếu thông tin bắt buộc",
+                data: null
+            });
+        }
+
+        try {
+            const result = await PaymentService.updatePaymentStatus(
+                order_id,
+                payment_method,
+                payment_status
+            );
+
+            return res.status(200).json({
+                code: "00",
+                status: "SUCCESS",
+                message: "Cập nhật thanh toán thành công",
+                data: result
+            });
+        } catch (error) {
+            console.error("❌ Lỗi cập nhật thanh toán:", error);
+            return res.status(500).json({
+                code: "99",
+                status: "ERROR",
+                message: "Lỗi cập nhật thanh toán",
                 data: null
             });
         }

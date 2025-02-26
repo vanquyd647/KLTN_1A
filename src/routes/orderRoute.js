@@ -1,5 +1,5 @@
 const express = require('express');
-const { createOrder, updateOrderStatus, cancelExpiredOrders, completeOrder, deleteOrder, getUserOrders } = require('../controllers/orderController');
+const { createOrder, updateOrderStatus, cancelExpiredOrders, completeOrder, deleteOrder, getUserOrders, getAllOrders } = require('../controllers/orderController');
 const authMiddleware = require('../middlewares/authMiddleware');
 const router = express.Router();
 
@@ -148,6 +148,49 @@ router.delete('/:orderId', authMiddleware, deleteOrder);
  *         description: Unauthorized
  */
 router.get('/user', authMiddleware, getUserOrders);
+
+/**
+ * @swagger
+ * /v1/api/orders:
+ *   get:
+ *     summary: Get all orders with pagination and filters
+ *     tags: [Orders]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *         default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *         default: 10
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *         description: Filter by order status
+ *       - in: query
+ *         name: startDate
+ *         schema:
+ *           type: string
+ *         description: Filter by start date (YYYY-MM-DD)
+ *       - in: query
+ *         name: endDate
+ *         schema:
+ *           type: string
+ *         description: Filter by end date (YYYY-MM-DD)
+ *     responses:
+ *       200:
+ *         description: List of orders retrieved successfully
+ *       401:
+ *         description: Unauthorized
+ */
+router.get('/', authMiddleware, getAllOrders);
+
 
 
 module.exports = router;

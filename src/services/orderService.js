@@ -9,7 +9,7 @@ require('dotenv').config();
 // 🔥 Kết nối Redis
 const redisQueueClient = createClient({
     socket: {
-        host: '127.0.0.1', 
+        host: '127.0.0.1',
         port: 6381
     }
 });
@@ -319,7 +319,7 @@ const OrderService = {
     },
 
     updateOrderStatus: async (orderId, status) => {
-        const allowedStatuses = ['pending', 'completed', 'canceled', 'failed', 'in_payment', 'in_progress'];
+        const allowedStatuses = ['pending','completed','cancelled','failed','in_payment','in_progress','shipping'];
         if (!allowedStatuses.includes(status)) {
             throw new Error('Invalid status');
         }
@@ -333,7 +333,7 @@ const OrderService = {
 
     completeOrder: async (orderId) => {
         const [updated] = await Order.update({ status: 'completed' }, {
-            where: { id: orderId, status: 'in_payment' }
+            where: { id: orderId, status: 'shipping' }
         });
 
         return updated > 0;
@@ -491,7 +491,153 @@ const OrderService = {
             console.error('Error in getOrdersByUserId:', error);
             throw error;
         }
+    },
+
+    getAllOrders: async (page = 1, limit = 10, filters = {}) => {
+        try {
+            const offset = (page - 1) * limit;
+            let whereClause = {};
+
+            // Xử lý các filter
+            if (filters.status) {
+                whereClause.status = filters.status;
+            }
+            if (filters.startDate && filters.endDate) {
+                whereClause.created_at = {
+                    [Op.between]: [filters.startDate, filters.endDate]
+                };
+            }
+
+            const orders = await Order.findAndCountAll({
+                where: whereClause,
+                distinct: true,
+                include: [
+                    {
+                        model: OrderDetails,
+                        as: 'orderDetails',
+                        required: false
+                    },
+                    {
+                        model: OrderItem,
+                        include: [
+                            {
+                                model: Product,
+                                attributes: ['product_name', 'slug', 'price', 'discount_price', 'status', 'is_new'],
+                                include: [
+                                    {
+                                        model: Color,
+                                        as: 'productColors',
+                                        attributes: ['color', 'hex_code'],
+                                        through: {
+                                            attributes: ['image']
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                model: Size,
+                                attributes: ['size']
+                            },
+                            {
+                                model: Color,
+                                attributes: ['color', 'hex_code']
+                            }
+                        ]
+                    },
+                    {
+                        model: Payment,
+                        attributes: ['payment_method', 'payment_status', 'payment_amount', 'transaction_id', 'payment_date']
+                    },
+                    {
+                        model: Carrier,
+                        attributes: ['name', 'price', 'description']
+                    }
+                ],
+                order: [['created_at', 'DESC']],
+                limit,
+                offset
+            });
+
+            const formattedOrders = orders.rows.map(order => ({
+                id: order.id,
+                status: order.status,
+                user_id: order.user_id,
+                pricing: {
+                    original_price: order.original_price,
+                    discount_code: order.discount_code || '',
+                    discount_amount: order.discount_amount || '0.00',
+                    discounted_price: order.discounted_price,
+                    final_price: order.final_price
+                },
+                shipping: {
+                    carrier: order.Carrier?.name || '',
+                    shipping_fee: order.Carrier?.price || 0,
+                    description: order.Carrier?.description || '',
+                    recipient: order.orderDetails ? {
+                        name: order.orderDetails.name,
+                        email: order.orderDetails.email,
+                        phone: order.orderDetails.phone,
+                        address: {
+                            street: order.orderDetails.street,
+                            ward: order.orderDetails.ward,
+                            district: order.orderDetails.district,
+                            city: order.orderDetails.city,
+                            country: order.orderDetails.country
+                        }
+                    } : null
+                },
+                payment: {
+                    method: order.Payment?.payment_method,
+                    status: order.Payment?.payment_status,
+                    amount: order.Payment?.payment_amount,
+                    transaction_id: order.Payment?.transaction_id,
+                    payment_date: order.Payment?.payment_date
+                },
+                items: order.OrderItems?.map(item => ({
+                    product: {
+                        name: item.Product?.product_name,
+                        slug: item.Product?.slug,
+                        status: item.Product?.status,
+                        is_new: item.Product?.is_new,
+                        price: {
+                            original: item.Product?.price,
+                            discounted: item.Product?.discount_price
+                        }
+                    },
+                    variant: {
+                        size: item.Size?.size,
+                        color: {
+                            name: item.Color?.color,
+                            hex_code: item.Color?.hex_code,
+                            image: item.Product?.productColors?.find(pc =>
+                                pc.id === item.Color?.id
+                            )?.ProductColor?.image || null
+                        }
+                    },
+                    quantity: item.quantity,
+                    price: item.price,
+                    reserved: item.reserved
+                })),
+                dates: {
+                    created_at: order.created_at,
+                    updated_at: order.updated_at,
+                    expires_at: order.expires_at
+                }
+            }));
+
+            return {
+                orders: formattedOrders,
+                total: orders.count,
+                currentPage: page,
+                totalPages: Math.ceil(orders.count / limit)
+            };
+
+        } catch (error) {
+            console.error('Error in getAllOrders:', error);
+            throw error;
+        }
     }
+
 
 };
 

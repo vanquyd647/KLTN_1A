@@ -25,7 +25,7 @@ module.exports = (sequelize) => {
             },
         },
         image: {
-            type: DataTypes.STRING, // hoặc DataTypes.TEXT nếu bạn muốn lưu trữ URL dài hơn
+            type: DataTypes.TEXT, // hoặc DataTypes.TEXT nếu bạn muốn lưu trữ URL dài hơn
             allowNull: true, // Có thể null nếu không có hình ảnh
         },
     }, {

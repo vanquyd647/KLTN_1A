@@ -8,7 +8,7 @@ const { createClient } = require('redis');
 
 const redisClient = createClient({
     socket: {
-        host: '127.0.0.1', 
+        host: '127.0.0.1',
         port: 6381
     }
 });
@@ -368,7 +368,43 @@ class OrderController {
                     }
                 }
             });
-            
+
+        } catch (error) {
+            console.error('Lỗi khi lấy danh sách đơn hàng:', error);
+            res.status(500).json({
+                code: 500,
+                status: 'error',
+                message: 'Đã có lỗi xảy ra khi lấy danh sách đơn hàng',
+                error: error.message
+            });
+        }
+    }
+
+    static async getAllOrders(req, res) {
+        try {
+            const page = parseInt(req.query.page) || 1;
+            const limit = parseInt(req.query.limit) || 10;
+            const filters = {
+                status: req.query.status,
+                startDate: req.query.startDate,
+                endDate: req.query.endDate
+            };
+
+            const result = await OrderService.getAllOrders(page, limit, filters);
+
+            res.json({
+                code: 200,
+                status: 'success',
+                message: 'Lấy danh sách đơn hàng thành công',
+                data: {
+                    orders: result.orders,
+                    pagination: {
+                        total: result.total,
+                        currentPage: result.currentPage,
+                        totalPages: result.totalPages
+                    }
+                }
+            });
         } catch (error) {
             console.error('Lỗi khi lấy danh sách đơn hàng:', error);
             res.status(500).json({
