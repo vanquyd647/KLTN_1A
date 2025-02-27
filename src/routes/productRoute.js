@@ -1,5 +1,5 @@
 const express = require('express');
-const {createProduct, getProducts, getProductsByPagination, getNewProductsByPagination, getNewProductsByPagination2, getFeaturedProductsByPagination, getFeaturedProductsByPagination2, getProductDetail, updateProduct, deleteProduct, searchProductsByNameAndColor} = require('../controllers/productController');
+const { createProduct, getProducts, getProductsByPagination, getNewProductsByPagination, getNewProductsByPagination2, getFeaturedProductsByPagination, getFeaturedProductsByPagination2, getProductDetail, updateProduct, deleteProduct, searchProductsByNameAndColor } = require('../controllers/productController');
 const rateLimiter = require('../middlewares/rateLimiter');
 
 const router = express.Router();
@@ -106,26 +106,90 @@ router.get('/', rateLimiter, getProducts);
  * @swagger
  * /v1/api/products/pagination:
  *   get:
- *     summary: Get products with pagination
+ *     summary: Get products with pagination and filters
  *     tags: [Products]
  *     parameters:
  *       - in: query
  *         name: page
  *         schema:
  *           type: integer
- *         description: Page number for pagination
+ *         description: Page number
  *       - in: query
  *         name: limit
  *         schema:
  *           type: integer
- *         description: Number of products per page
+ *         description: Items per page
+ *       - in: query
+ *         name: name
+ *         schema:
+ *           type: string
+ *         description: Filter by product name
+ *       - in: query
+ *         name: categories
+ *         schema:
+ *           type: string
+ *         description: Filter by category IDs (comma-separated)
+ *       - in: query
+ *         name: colors
+ *         schema:
+ *           type: string
+ *         description: Filter by color IDs (comma-separated)
+ *       - in: query
+ *         name: sizes
+ *         schema:
+ *           type: string
+ *         description: Filter by size IDs (comma-separated)
+ *       - in: query
+ *         name: priceRange
+ *         schema:
+ *           type: string
+ *         example: "0-1000000"
+ *         description: Price range filter (format min-max)
+ *       - in: query
+ *         name: sort
+ *         schema:
+ *           type: string
+ *           enum: [price_asc, price_desc, newest, oldest]
+ *         description: Sort products
  *     responses:
  *       200:
- *         description: Paginated products retrieved successfully
+ *         description: Success
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                 code:
+ *                   type: integer
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     products:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                     pagination:
+ *                       type: object
+ *                       properties:
+ *                         currentPage:
+ *                           type: integer
+ *                         pageSize:
+ *                           type: integer
+ *                         totalItems:
+ *                           type: integer
+ *                         totalPages:
+ *                           type: integer
+ *       404:
+ *         description: No products found
  *       500:
  *         description: Internal server error
  */
 router.get('/pagination', rateLimiter, getProductsByPagination);
+
 
 /**
  * @swagger

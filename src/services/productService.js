@@ -202,49 +202,119 @@ const productService = {
      *  .then(data => console.log(data))
      *  .catch(error => console.error(error));
      */
-    async getProductsByPagination({ page = 1, limit = 20 }) {
+    async getProductsByPagination({ page = 1, limit = 20, filters = {} }) {
         try {
             const pageNumber = parseInt(page, 10);
             const limitNumber = parseInt(limit, 10);
             const offset = (pageNumber - 1) * limitNumber;
 
-            // Tính tổng sản phẩm thực sự
-            const totalItems = await Product.count({
-                where: {
-                    status: { [Op.ne]: 'discontinued' },
+            // Xây dựng điều kiện where cơ bản
+            const whereClause = {
+                status: { [Op.ne]: 'discontinued' },
+            };
+
+            // Thêm điều kiện tìm kiếm theo tên
+            if (filters.name) {
+                whereClause[Op.or] = [
+                    {
+                        product_name: {
+                            [Op.like]: `%${filters.name}%` 
+                        }
+                    }
+                ];
+            }
+
+            // Xây dựng include cho query
+            const includeArray = [
+                {
+                    model: Category,
+                    as: 'categories',
+                    attributes: ['id', 'name'],
+                    through: { attributes: [] },
+                    ...(filters.categoryIds ? {
+                        where: {
+                            id: {
+                                [Op.in]: filters.categoryIds
+                            }
+                        }
+                    } : {})
                 },
+                {
+                    model: Color,
+                    as: 'productColors',
+                    attributes: ['id', 'color', 'hex_code'],
+                    through: { attributes: ['image'] },
+                    ...(filters.colorIds ? {
+                        where: {
+                            id: {
+                                [Op.in]: filters.colorIds
+                            }
+                        }
+                    } : {})
+                },
+                {
+                    model: Size,
+                    as: 'productSizes',
+                    attributes: ['id', 'size'],
+                    through: { attributes: [] },
+                    ...(filters.sizeIds ? {
+                        where: {
+                            id: {
+                                [Op.in]: filters.sizeIds
+                            }
+                        }
+                    } : {})
+                }
+            ];
+
+            // Thêm điều kiện lọc theo giá
+            if (filters.priceRange) {
+                const [minPrice, maxPrice] = filters.priceRange.split('-').map(Number);
+                if (!isNaN(minPrice) && !isNaN(maxPrice)) {
+                    whereClause.price = {
+                        [Op.between]: [minPrice, maxPrice]
+                    };
+                }
+            }
+
+            // Xác định thứ tự sắp xếp
+            const order = [];
+            if (filters.sort) {
+                switch (filters.sort) {
+                    case 'price_asc':
+                        order.push(['price', 'ASC']);
+                        break;
+                    case 'price_desc':
+                        order.push(['price', 'DESC']);
+                        break;
+                    case 'newest':
+                        order.push(['created_at', 'DESC']);
+                        break;
+                    case 'oldest':
+                        order.push(['created_at', 'ASC']);
+                        break;
+                    default:
+                        order.push(['created_at', 'DESC']);
+                }
+            }
+
+            // Đếm tổng số sản phẩm thỏa mãn điều kiện
+            const totalItems = await Product.count({
+                where: whereClause,
+                include: includeArray,
+                distinct: true
             });
 
-            // Lấy dữ liệu sản phẩm với phân trang
+            // Lấy danh sách sản phẩm với phân trang
             const products = await Product.findAll({
-                where: {
-                    status: { [Op.ne]: 'discontinued' },
-                },
-                include: [
-                    {
-                        model: Category,
-                        as: 'categories',
-                        attributes: ['id', 'name'],
-                        through: { attributes: [] },
-                    },
-                    {
-                        model: Color,
-                        as: 'productColors',
-                        attributes: ['id', 'color', 'hex_code'],
-                        through: { attributes: ['image'] },
-                    },
-                    {
-                        model: Size,
-                        as: 'productSizes',
-                        attributes: ['id', 'size'],
-                        through: { attributes: [] },
-                    },
-                ],
+                where: whereClause,
+                include: includeArray,
+                order,
                 limit: limitNumber,
                 offset,
+                distinct: true
             });
 
-            // Trả về dữ liệu với thông tin phân trang
             return {
                 products,
                 pagination: {
@@ -252,14 +322,14 @@ const productService = {
                     pageSize: limitNumber,
                     totalItems,
                     totalPages: Math.ceil(totalItems / limitNumber),
-                },
+                }
             };
         } catch (error) {
             logger.error('Error fetching paginated products:', error);
-            console.error('Error fetching paginated products:', error);
             throw new Error('Failed to fetch products with pagination');
         }
     },
+
 
     /**
      * Retrieves a paginated list of new products with optional sorting and filtering.

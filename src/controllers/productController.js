@@ -12,22 +12,45 @@ const createProduct = async (req, res) => {
 
         // Xóa tất cả cache liên quan
         const deleteKeys = [
-            'product_stocks', // Cache cho tồn kho sản phẩm
-            'products', // Cache cho danh sách sản phẩm
-            `product_${newProduct[0].slug}`, // Cache cho chi tiết sản phẩm
+            'product_stocks',
+            'products',
+            `product_${newProduct[0].slug}`,
         ];
 
         // Xóa cache cho các trang phân trang
-        const pages = Array.from({ length: 10 }, (_, i) => i + 1); // Giả sử có 10 trang
-        const limits = [5, 10, 20, 50]; // Các limit phổ biến
+        const pages = Array.from({ length: 10 }, (_, i) => i + 1);
+        const limits = [5, 10, 20, 50];
+
+        // Thêm mới: Các filter phổ biến cần xóa cache
+        const commonFilters = [
+            {}, // không filter
+            { name: '' },
+            { priceRange: '0-100000' },
+            { priceRange: '100000-500000' },
+            { priceRange: '500000-1000000' },
+            { priceRange: '1000000-up' },
+            { sort: 'newest' },
+            { sort: 'price_asc' },
+            { sort: 'price_desc' },
+            { sort: 'name_asc' },
+            { sort: 'name_desc' }
+        ];
 
         pages.forEach(page => {
             limits.forEach(limit => {
+                // Cache keys cho pagination cơ bản
                 deleteKeys.push(
                     `products_page_${page}_limit_${limit}`,
                     `new_products_page_${page}_limit_${limit}`,
                     `featured_products_page_${page}_limit_${limit}`
                 );
+
+                // Thêm cache keys cho các filter phổ biến
+                commonFilters.forEach(filter => {
+                    deleteKeys.push(
+                        `products_page_${page}_limit_${limit}_filters_${JSON.stringify(filter)}`
+                    );
+                });
             });
         });
 
@@ -173,25 +196,47 @@ const updateProduct = async (req, res) => {
 
         const updatedProduct = await productService.updateProduct(slug, productData);
 
-        // Xóa cache sản phẩm cũ trong Redis để khi truy vấn lại sẽ lấy dữ liệu mới
-        redisClient.del(`product_${slug}`);
         // Xóa tất cả cache liên quan
         const deleteKeys = [
-            'product_stocks', // Cache cho tồn kho sản phẩm
-            'products', // Cache cho danh sách sản phẩm
+            'product_stocks',
+            'products',
+            `product_${slug}`
         ];
 
         // Xóa cache cho các trang phân trang
-        const pages = Array.from({ length: 10 }, (_, i) => i + 1); // Giả sử có 10 trang
-        const limits = [5, 10, 20, 50]; // Các limit phổ biến
+        const pages = Array.from({ length: 10 }, (_, i) => i + 1);
+        const limits = [5, 10, 20, 50];
+
+        // Thêm mới: Các filter phổ biến cần xóa cache
+        const commonFilters = [
+            {}, // không filter
+            { name: '' },
+            { priceRange: '0-100000' },
+            { priceRange: '100000-500000' },
+            { priceRange: '500000-1000000' },
+            { priceRange: '1000000-up' },
+            { sort: 'newest' },
+            { sort: 'price_asc' },
+            { sort: 'price_desc' },
+            { sort: 'name_asc' },
+            { sort: 'name_desc' }
+        ];
 
         pages.forEach(page => {
             limits.forEach(limit => {
+                // Cache keys cho pagination cơ bản
                 deleteKeys.push(
                     `products_page_${page}_limit_${limit}`,
                     `new_products_page_${page}_limit_${limit}`,
                     `featured_products_page_${page}_limit_${limit}`
                 );
+
+                // Thêm cache keys cho các filter phổ biến
+                commonFilters.forEach(filter => {
+                    deleteKeys.push(
+                        `products_page_${page}_limit_${limit}_filters_${JSON.stringify(filter)}`
+                    );
+                });
             });
         });
 
@@ -266,10 +311,20 @@ const deleteProduct = async (req, res) => {
 // Hàm lấy sản phẩm với phân trang
 const getProductsByPagination = async (req, res) => {
     try {
-        const page = parseInt(req.query.page, 10) || 1; // Mặc định là 1 nếu không có tham số
-        const limit = parseInt(req.query.limit, 10) || 20; // Mặc định là 10 nếu không có tham số
+        const page = parseInt(req.query.page, 10) || 1;
+        const limit = parseInt(req.query.limit, 10) || 20;
 
-        const cacheKey = `products_page_${page}_limit_${limit}`;
+        // Lấy các tham số filter từ query
+        const filters = {
+            name: req.query.name,
+            categoryIds: req.query.categories ? req.query.categories.split(',').map(Number) : null,
+            colorIds: req.query.colors ? req.query.colors.split(',').map(Number) : null,
+            sizeIds: req.query.sizes ? req.query.sizes.split(',').map(Number) : null,
+            priceRange: req.query.priceRange,
+            sort: req.query.sort || 'newest'
+        };
+
+        const cacheKey = `products_page_${page}_limit_${limit}_filters_${JSON.stringify(filters)}`;
         const cachedProducts = await redisClient.get(cacheKey);
 
         if (cachedProducts) {
@@ -281,7 +336,7 @@ const getProductsByPagination = async (req, res) => {
             });
         }
 
-        const products = await productService.getProductsByPagination({ page, limit });
+        const products = await productService.getProductsByPagination({ page, limit, filters });
 
         if (!products || products.products.length === 0) {
             return res.status(404).json({
@@ -293,7 +348,7 @@ const getProductsByPagination = async (req, res) => {
         }
 
         await redisClient.set(cacheKey, JSON.stringify(products), {
-            EX: 3600, // thời gian hết hạn là 3600 giây
+            EX: 3600,
         });
 
         return res.status(200).json({
@@ -312,6 +367,7 @@ const getProductsByPagination = async (req, res) => {
         });
     }
 };
+
 
 // API for New Products with Pagination
 const getNewProductsByPagination = async (req, res) => {

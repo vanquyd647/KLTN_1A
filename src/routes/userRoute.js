@@ -1,8 +1,9 @@
 const express = require('express');
 const router = express.Router();
 
-const { register, verifyOtp, login, loginForAdmin, logout, getUserProfile, refreshToken, updateUserProfile, forgotPassword, resetPassword } = require('../controllers/userController');
+const { register, verifyOtp, login, loginForAdmin, logout, getUserProfile, refreshToken, updateUserProfile, forgotPassword, resetPassword, getAllUsers, createUser, updateUser, deleteUser } = require('../controllers/userController');
 const authMiddleware = require('../middlewares/authMiddleware');
+const adminAuthMiddleware = require('../middlewares/adminAuthMiddleware');
 
 /**
  * @swagger
@@ -342,6 +343,86 @@ router.post('/forgot-password', forgotPassword);
  */
 router.post('/reset-password', resetPassword);
 
+/**
+ * @swagger
+ * /v1/api/users/admin/users:
+ *   get:
+ *     summary: Get all users (Admin only)
+ *     tags: [Admin Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: email
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: phone
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: name
+ *         schema:
+ *           type: string
+ */
+router.get('/admin/users', adminAuthMiddleware, getAllUsers);
+
+/**
+ * @swagger
+ * /v1/api/users/admin/users/{id}:
+ *   delete:
+ *     summary: Delete user (Admin only)
+ *     tags: [Admin Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: User deleted successfully
+ *       403:
+ *         description: Cannot delete superadmin
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Server error
+ */
+router.delete('/admin/users/:id', adminAuthMiddleware, deleteUser);
+
+
+/**
+ * @swagger
+ * /v1/api/users/admin/users:
+ *   post:
+ *     summary: Create new user (Admin only)
+ *     tags: [Admin Users]
+ *     security:
+ *       - bearerAuth: []
+ */
+router.post('/admin/users', adminAuthMiddleware, createUser);
+
+/**
+ * @swagger
+ * /v1/api/users/admin/users/{id}:
+ *   put:
+ *     summary: Update user (Admin only)
+ *     tags: [Admin Users]
+ *     security:
+ *       - bearerAuth: []
+ */
+router.put('/admin/users/:id', adminAuthMiddleware, updateUser);
 
 
 module.exports = router;

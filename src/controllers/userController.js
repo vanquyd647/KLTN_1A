@@ -427,6 +427,109 @@ const resetPassword = async (req, res) => {
     }
 };
 
+const getAllUsers = async (req, res) => {
+    try {
+        const { page = 1, limit = 10, ...filters } = req.query;
+        const result = await UserService.getAllUsers(
+            parseInt(page),
+            parseInt(limit),
+            filters
+        );
+
+        res.status(200).json({
+            status: 'success',
+            code: 200,
+            message: 'Lấy danh sách người dùng thành công',
+            data: result
+        });
+    } catch (error) {
+        res.status(500).json({
+            status: 'error',
+            code: 500,
+            message: error.message,
+            data: null
+        });
+    }
+};
+
+const createUser = async (req, res) => {
+    try {
+        const userData = req.body;
+
+        // Validate input
+        const requiredFields = ['email', 'password', 'firstname', 'lastname', 'phone', 'gender', 'roles'];
+        const missingFields = requiredFields.filter(field => !userData[field]);
+
+        if (missingFields.length > 0) {
+            return res.status(400).json({
+                status: 'error',
+                code: 400,
+                message: `Missing required fields: ${missingFields.join(', ')}`,
+                data: null
+            });
+        }
+
+        const user = await UserService.createUserByAdmin(userData);
+
+        res.status(201).json({
+            status: 'success',
+            code: 201,
+            message: 'Tạo người dùng thành công',
+            data: user
+        });
+    } catch (error) {
+        res.status(500).json({
+            status: 'error',
+            code: 500,
+            message: error.message,
+            data: null
+        });
+    }
+};
+
+const updateUser = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const updateData = req.body;
+
+        const user = await UserService.updateUserByAdmin(id, updateData);
+
+        res.status(200).json({
+            status: 'success',
+            code: 200,
+            message: 'Cập nhật người dùng thành công',
+            data: user
+        });
+    } catch (error) {
+        res.status(500).json({
+            status: 'error',
+            code: 500,
+            message: error.message,
+            data: null
+        });
+    }
+};
+
+const deleteUser = async (req, res) => {
+    try {
+        const { id } = req.params;
+        await UserService.deleteUser(id);
+
+        res.status(200).json({
+            status: 'success',
+            code: 200,
+            message: 'Xóa người dùng thành công',
+            data: null
+        });
+    } catch (error) {
+        res.status(500).json({
+            status: 'error',
+            code: 500,
+            message: error.message,
+            data: null
+        });
+    }
+};
 
 
 module.exports = {
@@ -440,4 +543,8 @@ module.exports = {
     updateUserProfile,
     forgotPassword,
     resetPassword,
+    getAllUsers,
+    createUser,
+    updateUser,
+    deleteUser
 };

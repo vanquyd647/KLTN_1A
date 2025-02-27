@@ -220,7 +220,183 @@ const userService = {
             logger.error(`Error updating password: ${error.message}`);
             throw error;
         }
+    },
+
+    // Trong userService.js, hàm getAllUsers
+    async getAllUsers(page = 1, limit = 10, filters = {}) {
+        try {
+            const offset = (page - 1) * limit;
+            const where = {};
+
+            // Xử lý filters
+            if (filters.email) {
+                where.email = { [Op.like]: `%${filters.email}%` };
+            }
+            if (filters.phone) {
+                where.phone = { [Op.like]: `%${filters.phone}%` };
+            }
+            if (filters.name) {
+                where[Op.or] = [
+                    { firstname: { [Op.like]: `%${filters.name}%` } },
+                    { lastname: { [Op.like]: `%${filters.name}%` } }
+                ];
+            }
+
+            const { count, rows } = await User.findAndCountAll({
+                where,
+                limit,
+                offset,
+                include: [{
+                    model: UserRole,
+                    as: 'userRoles', // Thêm alias này
+                    include: [{
+                        model: Role,
+                        as: 'role'
+                    }]
+                }],
+                order: [['created_at', 'DESC']]
+            });
+
+            const users = rows.map(user => ({
+                id: user.id,
+                email: user.email,
+                firstname: user.firstname,
+                lastname: user.lastname,
+                phone: user.phone,
+                gender: user.gender,
+                roles: user.userRoles.map(ur => ur.role.role_name), // Cập nhật cách truy cập
+                created_at: user.created_at
+            }));
+
+            return {
+                users,
+                pagination: {
+                    total: count,
+                    page,
+                    totalPages: Math.ceil(count / limit)
+                }
+            };
+        } catch (error) {
+            logger.error(`Error getting users: ${error.message}`);
+            throw error;
+        }
+    },
+
+    async createUserByAdmin(userData) {
+        try {
+            const { password, roles, ...otherData } = userData;
+            const hashedPassword = await bcrypt.hash(password, 10);
+
+            // Validate roles
+            if (!roles || !Array.isArray(roles)) {
+                throw new Error('Roles must be provided as an array');
+            }
+
+            const user = await User.create({
+                ...otherData,
+                password: hashedPassword
+            });
+
+            const roleRecords = await Role.findAll({
+                where: { role_name: roles }
+            });
+
+            if (roleRecords.length !== roles.length) {
+                throw new Error('One or more invalid roles provided');
+            }
+
+            await Promise.all(
+                roleRecords.map(role =>
+                    UserRole.create({
+                        user_id: user.id,
+                        role_id: role.id
+                    })
+                )
+            );
+
+            return user;
+        } catch (error) {
+            logger.error(`Error creating user by admin: ${error.message}`);
+            throw error;
+        }
+    },
+
+    async updateUserByAdmin(userId, updateData) {
+        try {
+            const { roles, password, ...userData } = updateData;
+            const user = await User.findByPk(userId);
+
+            if (!user) {
+                throw new Error('User not found');
+            }
+
+            // Update user data
+            if (Object.keys(userData).length > 0) {
+                await user.update(userData);
+            }
+
+            // Update password if provided
+            if (password) {
+                const hashedPassword = await bcrypt.hash(password, 10);
+                await user.update({ password: hashedPassword });
+            }
+
+            // Update roles if provided
+            if (roles && Array.isArray(roles)) {
+                await UserRole.destroy({ where: { user_id: userId } });
+
+                const roleRecords = await Role.findAll({
+                    where: { role_name: roles }
+                });
+
+                if (roleRecords.length !== roles.length) {
+                    throw new Error('One or more invalid roles provided');
+                }
+
+                await Promise.all(
+                    roleRecords.map(role =>
+                        UserRole.create({
+                            user_id: userId,
+                            role_id: role.id
+                        })
+                    )
+                );
+            }
+
+            return user;
+        } catch (error) {
+            logger.error(`Error updating user by admin: ${error.message}`);
+            throw error;
+        }
+    },
+
+    async deleteUser(userId) {
+        try {
+            const user = await User.findByPk(userId);
+
+            if (!user) {
+                throw new Error('Người dùng không tồn tại');
+            }
+
+            // Kiểm tra nếu là superadmin
+            const roles = await this.getUserRoles(userId);
+            if (roles.includes('superadmin')) {
+                throw new Error('Không thể xóa tài khoản SuperAdmin');
+            }
+
+            // Xóa các bản ghi liên quan
+            await UserRole.destroy({ where: { user_id: userId } });
+
+            // Xóa người dùng
+            await user.destroy();
+
+            return true;
+        } catch (error) {
+            logger.error(`Error deleting user: ${error.message}`);
+            throw error;
+        }
     }
+
 
 };
 
