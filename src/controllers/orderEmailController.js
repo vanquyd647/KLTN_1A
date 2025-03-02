@@ -36,6 +36,10 @@ const orderEmailController = {
                 </tr>
             `).join('');
 
+            const subtotal = checkoutItems.reduce((total, item) => {
+                return total + (item.quantity * item.product.price);
+            }, 0);
+
             const html = `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
                     <h2 style="color: #2c3e50; text-align: center;">Xác Nhận Đơn Hàng #${orderDetails.data.order_id}</h2>
@@ -66,7 +70,7 @@ const orderEmailController = {
                     </table>
 
                     <div style="text-align: right; margin-top: 20px;">
-                        <p>Tổng tiền hàng: ${(orderDetails.data.amount - orderDetails.data.shipping_fee - orderDetails.data.discount_amount).toLocaleString('vi-VN')}đ</p>
+                        <p>Phí vận chuyển: ${orderDetails.data.original_price.toLocaleString('vi-VN')}đ</p>
                         <p>Phí vận chuyển: ${orderDetails.data.shipping_fee.toLocaleString('vi-VN')}đ</p>
                         <p>Giảm giá: ${orderDetails.data.discount_amount.toLocaleString('vi-VN')}đ</p>
                         <h3>Tổng thanh toán: ${(orderDetails.data.amount).toLocaleString('vi-VN')}đ</h3>

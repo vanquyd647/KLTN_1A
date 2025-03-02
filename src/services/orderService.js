@@ -127,8 +127,7 @@ const OrderService = {
             const order = await Order.create({
                 user_id: orderData.user_id,
                 carrier_id: orderData.carrier_id,
-                discount_code: orderData.discount_code,
-                discount_amount: orderData.discount_amount || 0,
+                coupon_id: orderData.coupon_id,
                 original_price: orderData.original_price,
                 discounted_price: orderData.discounted_price,
                 final_price: orderData.final_price,
@@ -213,8 +212,7 @@ const OrderService = {
                     'id',
                     'user_id',
                     'carrier_id',
-                    'discount_code',
-                    'discount_amount',
+                    'coupon_id',
                     'original_price',
                     'discounted_price',
                     'final_price',
@@ -413,8 +411,7 @@ const OrderService = {
                 status: order.status,
                 pricing: {
                     original_price: order.original_price,
-                    discount_code: order.discount_code || '',
-                    discount_amount: order.discount_amount || '0.00',
+                    coupon_id: order.coupon_id || '',
                     discounted_price: order.discounted_price,
                     final_price: order.final_price
                 },
@@ -564,8 +561,7 @@ const OrderService = {
                 user_id: order.user_id,
                 pricing: {
                     original_price: order.original_price,
-                    discount_code: order.discount_code || '',
-                    discount_amount: order.discount_amount || '0.00',
+                    coupon_id: order.coupon_id || '',
                     discounted_price: order.discounted_price,
                     final_price: order.final_price
                 },

@@ -27,6 +27,7 @@ const definePaymentLog = require('./PaymentLog');
 const defineCarrier = require('./Carrier');
 const defineRevenue = require('./Revenue');
 const defineFavorite = require('./Favorite');
+const defineCoupon = require('./Coupon');
 
 
 const models = {
@@ -56,6 +57,8 @@ const models = {
     Carrier: defineCarrier(sequelize),
     Revenue: defineRevenue(sequelize),
     Favorite: defineFavorite(sequelize),
+    Coupon: defineCoupon(sequelize),
+
 
 };
 
@@ -86,6 +89,7 @@ const {
     Carrier,
     Revenue,
     Favorite,
+    Coupon,
 } = models;
 
 // Các quan hệ giữa các mô hình
@@ -255,6 +259,15 @@ Favorite.belongsTo(Product, {
     as: 'product'
 });
 
+Order.belongsTo(Coupon, {
+    foreignKey: 'coupon_id',
+    as: 'coupon'
+});
+
+Coupon.hasMany(Order, {
+    foreignKey: 'coupon_id',
+    as: 'orders'
+});
 
 module.exports = {
     ...models,

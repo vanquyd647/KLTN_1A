@@ -25,25 +25,19 @@ module.exports = (sequelize) => {
             },
             comment: 'ID của nhà vận chuyển'
         },
-        discount_code: {
-            type: DataTypes.STRING,
+        coupon_id: {
+            type: DataTypes.INTEGER,
             allowNull: true,
-            comment: 'Mã giảm giá nếu có'
-        },
-        discount_amount: {
-            type: DataTypes.DECIMAL(10, 2),
-            defaultValue: 0.00,
-            comment: 'Số tiền giảm giá áp dụng'
+            references: {
+                model: 'coupons',
+                key: 'id'
+            },
+            comment: 'ID của mã giảm giá nếu có'
         },
         original_price: {
             type: DataTypes.DECIMAL(10, 2),
             allowNull: false,
             comment: 'Giá gốc trước khi áp dụng giảm giá'
-        },
-        discounted_price: {
-            type: DataTypes.DECIMAL(10, 2),
-            allowNull: false,
-            comment: 'Giá sau khi áp dụng giảm giá'
         },
         final_price: {
             type: DataTypes.DECIMAL(10, 2),
@@ -54,7 +48,7 @@ module.exports = (sequelize) => {
             type: DataTypes.ENUM(
                 'pending',         // Chờ xử lý
                 'completed',       // Hoàn thành
-                'cancelled',        // Đã hủy
+                'cancelled',       // Đã hủy
                 'failed',         // Thất bại
                 'in_payment',     // Đang thanh toán
                 'in_progress',    // Đang xử lý

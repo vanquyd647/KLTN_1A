@@ -34,6 +34,7 @@ const addressRoutes = require('./routes/addressRoute');
 const orderEmailRoutes = require('./routes/orderEmailRoutes');
 const favoriteRoute = require('./routes/favoriteRoute');
 const orderTrackingRoute = require('./routes/orderTrackingRoute');
+const couponRoutes = require('./routes/couponRoutes');
 const { createRevenueTrigger, checkTrigger } = require('./db/triggers');
 const client = require('prom-client');
 
@@ -198,6 +199,7 @@ app.use('/v1/api/addresses', addressRoutes);
 app.use('/v1/api/orders', orderEmailRoutes);
 app.use('/v1/api/favorites', favoriteRoute);
 app.use('/v1/api/order-tracking', orderTrackingRoute);
+app.use('/v1/api/coupons', couponRoutes);
 
 // Schedule Cron job: Update is_new status mỗi ngày lúc 2:00 AM
 cron.schedule('0 2 * * *', () => {

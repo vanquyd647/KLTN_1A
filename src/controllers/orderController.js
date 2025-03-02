@@ -39,7 +39,7 @@ class OrderController {
                     status: 'error',
                     message: 'Dữ liệu đơn hàng không hợp lệ',
                     errors: {
-                        required: ['carrier_id', 'original_price', 'discounted_price', 'final_price', 'items']
+                        required: ['carrier_id', 'original_price', 'final_price', 'items']
                     }
                 });
             }
@@ -101,7 +101,7 @@ class OrderController {
                             order_id: orderResult.orderId,
                             email: orderData.email,
                             amount: orderData.final_price,
-                            expires_at: orderResult.expires_at, // Thêm expires_at
+                            expires_at: orderResult.expires_at, 
                             items: orderData.items.map(item => ({
                                 product_name: item.product_name,
                                 quantity: item.quantity,
@@ -141,7 +141,6 @@ class OrderController {
     static validateOrderInput(orderData) {
         return !!(orderData.carrier_id &&
             orderData.original_price &&
-            orderData.discounted_price &&
             orderData.final_price &&
             Array.isArray(orderData.items) &&
             orderData.items.length > 0);
