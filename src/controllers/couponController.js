@@ -20,15 +20,38 @@ const couponController = {
 
     getAllCoupons: async (req, res) => {
         try {
-            const result = await couponService.getAllCoupons(req.query);
+            const filters = {
+                page: req.query.page || 1,
+                limit: req.query.limit || 10,
+                search: req.query.search,
+                is_active: req.query.is_active,
+                startDate: req.query.startDate,
+                endDate: req.query.endDate,
+                minAmount: req.query.minAmount,
+                maxAmount: req.query.maxAmount,
+                sortBy: req.query.sortBy || 'created_at',
+                sortOrder: req.query.sortOrder || 'DESC'
+            };
+
+            const result = await couponService.getAllCoupons(filters);
             res.json({
                 code: 200,
                 success: true,
                 data: {
                     coupons: result.rows,
                     total: result.count,
-                    page: parseInt(req.query.page || 1),
-                    limit: parseInt(req.query.limit || 10)
+                    page: parseInt(filters.page),
+                    limit: parseInt(filters.limit),
+                    filters: {
+                        search: filters.search,
+                        is_active: filters.is_active,
+                        startDate: filters.startDate,
+                        endDate: filters.endDate,
+                        minAmount: filters.minAmount,
+                        maxAmount: filters.maxAmount,
+                        sortBy: filters.sortBy,
+                        sortOrder: filters.sortOrder
+                    }
                 }
             });
         } catch (error) {

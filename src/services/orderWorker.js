@@ -8,7 +8,7 @@ require('dotenv').config();
 // 🔥 Kết nối Redis
 const redisQueueClient = createClient({
     socket: {
-        host: '127.0.0.1', 
+        host: '127.0.0.1',
         port: 6381
     }
 });
@@ -30,8 +30,7 @@ const worker = new Worker('orderQueue', async (job) => {
     console.log(`🚀 Worker đang xử lý đơn hàng: ${job.id}`);
     console.log("📥 Dữ liệu nhận được trong Worker:", JSON.stringify(job.data, null, 2));
 
-    if (!job.data.carrier_id || !job.data.original_price ||
-        !job.data.discounted_price || !job.data.final_price || !job.data.items) {
+    if (!job.data.carrier_id || !job.data.items) {
         logger.error(`❌ Đơn hàng ${job.id} bị lỗi: Thiếu thông tin quan trọng!`);
         console.error(`❌ Đơn hàng ${job.id} bị lỗi: Thiếu thông tin quan trọng!`);
 
@@ -44,27 +43,47 @@ const worker = new Worker('orderQueue', async (job) => {
     }
 
     try {
-        // ✅ Xử lý đơn hàng
         const order = await OrderService.processOrder(job.data);
-
         console.log(`✅ Đơn hàng ${job.id} đã được xử lý thành công!`);
-
-        // 🔵 Ghi nhận kết quả thành công vào Redis
-        await redisQueueClient.set(`orderResult:${job.id}`, JSON.stringify({ success: true, orderId: order.id }), 'EX', 60);
-
+        await redisQueueClient.set(`orderResult:${job.id}`,
+            JSON.stringify({ success: true, orderId: order.id }),
+            'EX', 60
+        );
         return { success: true, orderId: order.id };
     } catch (error) {
         logger.error(`❌ Lỗi khi xử lý đơn hàng ${job.id}: ${error.message}`);
-        console.error(`❌ Lỗi khi xử lý đơn hàng ${job.id}: ${error.message}`);
 
-        // ❌ Cập nhật trạng thái đơn hàng là "failed"
-        await OrderService.updateOrderStatus(job.data.order_id, 'failed');
+        // Chỉ cập nhật trạng thái nếu đơn hàng đã được tạo
+        if (job.data.order_id) {
+            await OrderService.updateOrderStatus(job.data.order_id, 'failed');
+        }
 
-        // 🔴 Ghi nhận lỗi vào Redis để Controller có thể lấy phản hồi
-        await redisQueueClient.set(`orderResult:${job.id}`, JSON.stringify({ success: false, error: error.message }), 'EX', 60);
+        // Phân loại lỗi để trả về response phù hợp
+        let errorResponse;
+        if (error.message.includes('Không đủ hàng')) {
+            errorResponse = {
+                success: false,
+                code: 400,
+                status: 'error',
+                message: 'Sản phẩm không đủ số lượng trong kho',
+                error: error.message
+            };
+        } else {
+            errorResponse = {
+                success: false,
+                code: 500,
+                status: 'error',
+                message: 'Lỗi xử lý đơn hàng',
+                error: error.message
+            };
+        }
 
-        // 🚨 Ném lỗi để BullMQ ghi nhận thất bại
-        throw new Error(error.message);
+        await redisQueueClient.set(`orderResult:${job.id}`,
+            JSON.stringify(errorResponse),
+            'EX', 60
+        );
+
+        throw error;
     }
 }, {
     connection: {

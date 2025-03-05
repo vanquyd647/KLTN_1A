@@ -61,11 +61,47 @@ class OrderController {
             const stockCheck = await OrderController.checkAndSyncStock(orderData.items);
             if (!stockCheck.success) {
                 await redisClient.del(lockKey);
+
+                // Thêm xử lý chi tiết cho trường hợp hết hàng
+                if (stockCheck.data?.outOfStockItems?.length > 0) {
+                    return res.status(400).json({
+                        code: 400,
+                        status: 'error',
+                        message: 'Một số sản phẩm đã hết hàng',
+                        data: {
+                            outOfStockItems: stockCheck.data.outOfStockItems.map(item => ({
+                                product_name: item.product_name,
+                                size: item.size,
+                                color: item.color,
+                                requested: item.requested,
+                                available: item.available,
+                                missing: item.missing
+                            }))
+                        }
+                    });
+                }
+
+                // Xử lý trường hợp sản phẩm không tồn tại
+                if (stockCheck.data?.notFoundItems?.length > 0) {
+                    return res.status(404).json({
+                        code: 404,
+                        status: 'error',
+                        message: 'Một số sản phẩm không tồn tại',
+                        data: {
+                            notFoundItems: stockCheck.data.notFoundItems.map(item => ({
+                                product_name: item.product_name,
+                                size: item.size,
+                                color: item.color
+                            }))
+                        }
+                    });
+                }
+
+                // Trường hợp lỗi khác
                 return res.status(stockCheck.code).json({
                     code: stockCheck.code,
                     status: 'error',
-                    message: stockCheck.message,
-                    data: stockCheck.data
+                    message: stockCheck.message
                 });
             }
 
@@ -101,7 +137,7 @@ class OrderController {
                             order_id: orderResult.orderId,
                             email: orderData.email,
                             amount: orderData.final_price,
-                            expires_at: orderResult.expires_at, 
+                            expires_at: orderResult.expires_at,
                             items: orderData.items.map(item => ({
                                 product_name: item.product_name,
                                 quantity: item.quantity,
@@ -128,11 +164,40 @@ class OrderController {
         } catch (error) {
             await redisClient.del(lockKey);
             console.error('Lỗi tạo đơn hàng:', error);
+
+            // Xử lý lỗi tồn kho
+            if (error.message.includes('Không đủ hàng')) {
+                const match = error.message.match(/Còn lại: (\d+), Yêu cầu: (\d+)/);
+                return res.status(400).json({
+                    code: 400,
+                    status: 'error',
+                    message: 'Sản phẩm không đủ số lượng trong kho',
+                    data: {
+                        available: match ? parseInt(match[1]) : 0,
+                        requested: match ? parseInt(match[2]) : 0,
+                        error: error.message
+                    }
+                });
+            }
+
+            // Xử lý lỗi undefined id
+            if (error.message.includes('invalid "undefined" value')) {
+                return res.status(400).json({
+                    code: 400,
+                    status: 'error',
+                    message: 'Lỗi xử lý đơn hàng',
+                    error: 'Không thể cập nhật trạng thái đơn hàng'
+                });
+            }
+
+            // Lỗi chung
             return res.status(500).json({
                 code: 500,
                 status: 'error',
                 message: 'Đã có lỗi xảy ra khi xử lý đơn hàng',
-                error: error.message
+                error: process.env.NODE_ENV === 'production'
+                    ? 'Internal Server Error'
+                    : error.message
             });
         }
     }
@@ -140,11 +205,12 @@ class OrderController {
     // Các phương thức hỗ trợ
     static validateOrderInput(orderData) {
         return !!(orderData.carrier_id &&
-            orderData.original_price &&
-            orderData.final_price &&
+            typeof orderData.original_price === 'number' &&
+            typeof orderData.final_price === 'number' &&
             Array.isArray(orderData.items) &&
             orderData.items.length > 0);
     }
+
 
     static checkDuplicateItems(items) {
         const uniqueItems = new Set();
@@ -158,103 +224,75 @@ class OrderController {
         return { hasDuplicates: false };
     }
 
+    // Trong OrderController.js
     static async checkAndSyncStock(items) {
-        const outOfStockItems = [];
-        const notFoundItems = [];
+        try {
+            const outOfStockItems = [];
+            const notFoundItems = [];
 
-        for (const item of items) {
-            const key = `stock:${item.product_id}:${item.size_id}:${item.color_id}`;
-            let redisStock = await redisClient.get(key);
-
-            // Log chi tiết kiểm tra
-            console.log('🔍 Chi tiết kiểm tra:', {
-                key,
-                product_name: item.product_name,
-                size: item.size_name,
-                color: item.color_name,
-                requested: item.quantity,
-                redisStock,
-                redisStockType: typeof redisStock
-            });
-
-            // Kiểm tra trong MySQL nếu không có trong Redis
-            if (redisStock === null) {
-                console.log('⚠️ Không tìm thấy trong Redis, kiểm tra MySQL:', {
-                    product_id: item.product_id,
-                    size_id: item.size_id,
-                    color_id: item.color_id
-                });
-
-                const mysqlStock = await ProductStock.findOne({
-                    where: {
-                        product_id: item.product_id,
-                        size_id: item.size_id,
-                        color_id: item.color_id
-                    }
-                });
-
-                if (!mysqlStock) {
-                    notFoundItems.push({
-                        product_name: item.product_name,
-                        size: item.size_name,
-                        color: item.color_name
-                    });
-                    console.log('❌ Sản phẩm không tồn tại:', item.product_name);
-                    continue;
+            for (const item of items) {
+                // Kiểm tra tham số đầu vào
+                if (!item.product_id || !item.size_id || !item.color_id) {
+                    throw new Error('Missing required product information');
                 }
 
-                redisStock = mysqlStock.quantity.toString();
-                await redisClient.set(key, redisStock);
-                console.log('✅ Đã cập nhật Redis:', { key, value: redisStock });
+                const key = `stock:${item.product_id}:${item.size_id}:${item.color_id}`;
+                let redisStock = await redisClient.get(key);
+
+                // Kiểm tra trong MySQL nếu không có trong Redis
+                if (redisStock === null) {
+                    const mysqlStock = await ProductStock.findOne({
+                        where: {
+                            product_id: item.product_id,
+                            size_id: item.size_id,
+                            color_id: item.color_id
+                        }
+                    });
+
+                    if (!mysqlStock) {
+                        notFoundItems.push({
+                            product_id: item.product_id,
+                            product_name: item.product_name,
+                            size: item.size_name,
+                            color: item.color_name
+                        });
+                        continue;
+                    }
+
+                    redisStock = mysqlStock.quantity.toString();
+                    await redisClient.set(key, redisStock);
+                }
+
+                const available = parseInt(redisStock, 10);
+                if (isNaN(available) || available < item.quantity) {
+                    outOfStockItems.push({
+                        product_id: item.product_id,
+                        product_name: item.product_name,
+                        size: item.size_name,
+                        color: item.color_name,
+                        requested: item.quantity,
+                        available: available || 0
+                    });
+                    console.error(`❌ Không đủ hàng cho sản phẩm ${item.product_id}-${item.size_id}-${item.color_id}. Còn lại: ${available}, Yêu cầu: ${item.quantity}`);
+                }
             }
 
-            const available = parseInt(redisStock, 10);
-
-            if (available < item.quantity) {
-                outOfStockItems.push({
-                    product_name: item.product_name,
-                    size: item.size_name,
-                    color: item.color_name,
-                    requested: item.quantity,
-                    available: available,
-                    missing: item.quantity - available
-                });
-                console.log('⚠️ Sản phẩm không đủ số lượng:', {
-                    product: item.product_name,
-                    requested: item.quantity,
-                    available
-                });
+            if (outOfStockItems.length > 0 || notFoundItems.length > 0) {
+                return {
+                    success: false,
+                    code: 400,
+                    message: 'Kiểm tra tồn kho thất bại',
+                    data: { outOfStockItems, notFoundItems }
+                };
             }
+
+            return { success: true };
+        } catch (error) {
+            console.error('Lỗi kiểm tra tồn kho:', error);
+            throw new Error(`Lỗi kiểm tra tồn kho: ${error.message}`);
         }
-
-        if (notFoundItems.length > 0 || outOfStockItems.length > 0) {
-            let message = 'Kiểm tra tồn kho thất bại: ';
-            const details = [];
-
-            if (outOfStockItems.length > 0) {
-                details.push(`${outOfStockItems.length} sản phẩm không đủ số lượng`);
-            }
-            if (notFoundItems.length > 0) {
-                details.push(`${notFoundItems.length} sản phẩm không tồn tại`);
-            }
-            message += details.join(' và ');
-
-            console.log('❌ Kết quả kiểm tra thất bại:', {
-                notFoundCount: notFoundItems.length,
-                outOfStockCount: outOfStockItems.length
-            });
-
-            return {
-                success: false,
-                code: 400,
-                message,
-                data: { notFoundItems, outOfStockItems }
-            };
-        }
-
-        console.log('✅ Kiểm tra tồn kho thành công');
-        return { success: true };
     }
+
 
 
     static async decrementStock(items) {
@@ -386,7 +424,11 @@ class OrderController {
             const filters = {
                 status: req.query.status,
                 startDate: req.query.startDate,
-                endDate: req.query.endDate
+                endDate: req.query.endDate,
+                orderId: req.query.orderId,
+                customerName: req.query.customerName,
+                customerEmail: req.query.customerEmail,
+                customerPhone: req.query.customerPhone
             };
 
             const result = await OrderService.getAllOrders(page, limit, filters);

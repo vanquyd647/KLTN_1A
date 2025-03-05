@@ -15,6 +15,7 @@ const sequelize = new Sequelize(testdb, dbuser, dbpass, {
     dialect: dbdialect,  // Chỉ định MariaDB sử dụng dialect MySQL
     port: dbport,        // Port của MariaDB
     logging: console.log,  // Bật logging để xem chi tiết
+    timezone: "+07:00",
 });
 
 // const sequelize = new Sequelize('testdb', 'admin', 'admin123', {

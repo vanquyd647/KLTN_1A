@@ -10,15 +10,30 @@ const couponService = {
         }
     },
 
-    getAllCoupons: async (query = {}) => {
+    getAllCoupons: async (filters = {}) => {
         try {
-            const { page = 1, limit = 10, is_active, search } = query;
-            const offset = (page - 1) * limit;
+            const { 
+                page = 1, 
+                limit = 10, 
+                search,
+                is_active,
+                startDate,
+                endDate,
+                minAmount,
+                maxAmount,
+                sortBy = 'created_at',
+                sortOrder = 'DESC'
+            } = filters;
 
+            const offset = (page - 1) * limit;
             const where = {};
-            if (typeof is_active !== 'undefined') {
-                where.is_active = is_active;
+
+            // Filter theo trạng thái active
+            if (typeof is_active !== 'undefined' && is_active !== '') {
+                where.is_active = is_active === 'true';
             }
+
+            // Filter theo search (code hoặc description)
             if (search) {
                 where[Op.or] = [
                     { code: { [Op.like]: `%${search}%` } },
@@ -26,11 +41,47 @@ const couponService = {
                 ];
             }
 
+            // Filter theo khoảng thời gian
+            if (startDate || endDate) {
+                where.expiry_date = {};
+                if (startDate) {
+                    where.expiry_date[Op.gte] = new Date(startDate);
+                }
+                if (endDate) {
+                    where.expiry_date[Op.lte] = new Date(endDate);
+                }
+            }
+
+            // Filter theo khoảng giá giảm
+            if (minAmount || maxAmount) {
+                where.discount_amount = {};
+                if (minAmount) {
+                    where.discount_amount[Op.gte] = minAmount;
+                }
+                if (maxAmount) {
+                    where.discount_amount[Op.lte] = maxAmount;
+                }
+            }
+
+            // Validate sortBy để tránh SQL injection
+            const validSortColumns = ['created_at', 'expiry_date', 'discount_amount', 'code'];
+            const finalSortBy = validSortColumns.includes(sortBy) ? sortBy : 'created_at';
+            
+            // Validate sortOrder
+            const finalSortOrder = ['ASC', 'DESC'].includes(sortOrder.toUpperCase()) 
+                ? sortOrder.toUpperCase() 
+                : 'DESC';
+
             return await Coupon.findAndCountAll({
                 where,
                 limit: parseInt(limit),
                 offset: parseInt(offset),
-                order: [['created_at', 'DESC']]
+                order: [[finalSortBy, finalSortOrder]],
+                attributes: [
+                    'id', 'code', 'description', 'discount_amount',
+                    'expiry_date', 'total_quantity', 'used_quantity',
+                    'is_active', 'created_at', 'updated_at'
+                ]
             });
         } catch (error) {
             throw error;
@@ -54,9 +105,9 @@ const couponService = {
                 where: {
                     code: code,
                     is_active: true,
-                    // expiry_date: {
-                    //     [Op.gt]: new Date()
-                    // }
+                    expiry_date: {
+                        [Op.gt]: new Date()
+                    }
                 }
             });
 

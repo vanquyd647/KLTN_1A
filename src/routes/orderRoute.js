@@ -169,6 +169,26 @@ router.get('/user', authMiddleware, getUserOrders);
  *           type: integer
  *         default: 10
  *       - in: query
+ *         name: orderId
+ *         schema:
+ *           type: string
+ *         description: Filter by order ID
+ *       - in: query
+ *         name: customerName
+ *         schema:
+ *           type: string
+ *         description: Filter by customer name
+ *       - in: query
+ *         name: customerEmail
+ *         schema:
+ *           type: string
+ *         description: Filter by customer email
+ *       - in: query
+ *         name: customerPhone  
+ *         schema:
+ *           type: string
+ *         description: Filter by customer phone
+ *       - in: query
  *         name: status
  *         schema:
  *           type: string

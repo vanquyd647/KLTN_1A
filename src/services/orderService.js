@@ -36,10 +36,10 @@ const orderQueue = new Queue('orderQueue', {
 const OrderService = {
     // 📌 Thêm đơn hàng vào hàng đợi
     createOrder: async (orderData) => {
-        if (!orderData.carrier_id || !orderData.original_price ||
-            !orderData.discounted_price || !orderData.final_price || !orderData.items) {
-            throw new Error("Thiếu thông tin quan trọng trong đơn hàng!");
-        }
+        // if (!orderData.carrier_id || !orderData.original_price ||
+        //     !orderData.discounted_price || !orderData.final_price || !orderData.items) {
+        //     throw new Error("Thiếu thông tin quan trọng trong đơn hàng!");
+        // }
 
         const job = await orderQueue.add('processOrder', orderData, {
             removeOnComplete: true,
@@ -191,13 +191,25 @@ const OrderService = {
 
     // 📌 Cập nhật trạng thái đơn hàng
     updateOrderStatus: async (orderId, status) => {
-        const allowedStatuses = ['pending', 'completed', 'canceled', 'failed', 'in_payment', 'in_progress'];
+        // Kiểm tra orderId
+        if (!orderId) {
+            throw new Error('Order ID is required');
+        }
+    
+        const allowedStatuses = ['pending', 'completed', 'cancelled', 'failed', 'in_payment', 'in_progress', 'shipping'];
         if (!allowedStatuses.includes(status)) {
             throw new Error('Invalid status');
         }
-
-        const [updated] = await Order.update({ status }, { where: { id: orderId } });
-
+    
+        const [updated] = await Order.update(
+            { status },
+            { 
+                where: { id: orderId },
+                // Thêm returning để kiểm tra kết quả
+                returning: true
+            }
+        );
+    
         return updated > 0;
     },
 
@@ -213,8 +225,7 @@ const OrderService = {
                     'user_id',
                     'carrier_id',
                     'coupon_id',
-                    'original_price',
-                    'discounted_price',
+                    'original_price',                 
                     'final_price',
                     'status',
                     'expires_at',
@@ -317,7 +328,7 @@ const OrderService = {
     },
 
     updateOrderStatus: async (orderId, status) => {
-        const allowedStatuses = ['pending','completed','cancelled','failed','in_payment','in_progress','shipping'];
+        const allowedStatuses = ['pending', 'completed', 'cancelled', 'failed', 'in_payment', 'in_progress', 'shipping'];
         if (!allowedStatuses.includes(status)) {
             throw new Error('Invalid status');
         }
@@ -505,6 +516,23 @@ const OrderService = {
                 };
             }
 
+            // Thêm filter theo mã đơn hàng
+            if (filters.orderId) {
+                whereClause.id = filters.orderId;
+            }
+
+            // Tạo điều kiện tìm kiếm cho OrderDetails
+            let orderDetailsWhere = {};
+            if (filters.customerName) {
+                orderDetailsWhere.name = { [Op.like]: `%${filters.customerName}%` };
+            }
+            if (filters.customerEmail) {
+                orderDetailsWhere.email = { [Op.like]: `%${filters.customerEmail}%` };
+            }
+            if (filters.customerPhone) {
+                orderDetailsWhere.phone = { [Op.like]: `%${filters.customerPhone}%` };
+            }
+
             const orders = await Order.findAndCountAll({
                 where: whereClause,
                 distinct: true,
@@ -512,6 +540,8 @@ const OrderService = {
                     {
                         model: OrderDetails,
                         as: 'orderDetails',
+                        required: Object.keys(orderDetailsWhere).length > 0,
+                        where: orderDetailsWhere,
                         required: false
                     },
                     {
