@@ -7,13 +7,22 @@ class FavoriteService {
      */
     _createWhereCondition(userId, sectionId) {
         if (userId) {
-            return { user_id: userId };
+            // Nếu có userId, chỉ lấy các bản ghi của user và không có section_id
+            return { 
+                user_id: userId,
+                section_id: null 
+            };
         }
         if (sectionId) {
-            return { section_id: sectionId };
+            // Nếu có sectionId, chỉ lấy các bản ghi của session và không có user_id
+            return { 
+                section_id: sectionId,
+                user_id: null
+            };
         }
         throw new Error('Yêu cầu userId hoặc sectionId');
     }
+    
 
     /**
      * Thêm sản phẩm vào danh sách yêu thích
@@ -25,30 +34,52 @@ class FavoriteService {
             if (!product) {
                 throw new Error('Sản phẩm không tồn tại');
             }
-
-            // Tìm favorite hiện có (nếu có)
+    
+            // Tạo điều kiện tìm kiếm
+            let whereCondition = {
+                product_id: productId
+            };
+    
+            if (userId) {
+                // Nếu có userId, tìm trong các bản ghi của user (không có section_id)
+                whereCondition.user_id = userId;
+                whereCondition.section_id = null;
+            } else if (sectionId) {
+                // Nếu có sectionId, tìm trong các bản ghi của session (không có user_id)
+                whereCondition.section_id = sectionId;
+                whereCondition.user_id = null;
+            }
+    
+            // Tìm favorite hiện có
             const existingFavorite = await Favorite.findOne({
-                where: {
-                    product_id: productId,
-                    ...(userId ? { user_id: userId } : { section_id: sectionId })
-                }
+                where: whereCondition
             });
-
+    
             if (existingFavorite) {
                 throw new Error('Sản phẩm đã có trong danh sách yêu thích');
             }
-
-            // Tạo và trả về favorite mới
-            return await Favorite.create({
-                user_id: userId,
-                section_id: sectionId,
+    
+            // Tạo favorite mới
+            const newFavorite = {
                 product_id: productId,
                 created_at: new Date()
-            });
+            };
+    
+            if (userId) {
+                newFavorite.user_id = userId;
+                newFavorite.section_id = null;
+            } else if (sectionId) {
+                newFavorite.section_id = sectionId;
+                newFavorite.user_id = null;
+            }
+    
+            // Tạo và trả về favorite mới
+            return await Favorite.create(newFavorite);
         } catch (error) {
             throw error;
         }
     }
+    
 
     /**
      * Lấy danh sách yêu thích có phân trang
@@ -158,12 +189,34 @@ class FavoriteService {
         try {
             // Kiểm tra favorites của section có tồn tại không
             const sectionFavorites = await Favorite.findAll({
-                where: { section_id: sectionId }
+                where: { 
+                    section_id: sectionId,
+                    // Chỉ lấy những bản ghi không có user_id
+                    user_id: null
+                }
             });
     
-            // Nếu không có favorites nào từ section
             if (!sectionFavorites || sectionFavorites.length === 0) {
-                throw new Error('Không có sản phẩm yêu thích nào để chuyển');
+                // Cập nhật các bản ghi có cả user_id và section_id
+                const updatedCount = await Favorite.update(
+                    { section_id: null },
+                    {
+                        where: {
+                            user_id: userId,
+                            section_id: sectionId
+                        }
+                    }
+                );
+    
+                if (updatedCount[0] === 0) {
+                    throw new Error('Không có sản phẩm yêu thích nào để chuyển');
+                }
+    
+                return {
+                    transferred: 0,
+                    updated: updatedCount[0],
+                    deleted: 0
+                };
             }
     
             let transferredCount = 0;
@@ -171,42 +224,61 @@ class FavoriteService {
     
             // Chuyển từng favorite
             for (const favorite of sectionFavorites) {
-                const [newFavorite, created] = await Favorite.findOrCreate({
+                // Kiểm tra xem đã có favorite với user_id và product_id này chưa
+                const existingUserFavorite = await Favorite.findOne({
                     where: {
                         user_id: userId,
-                        product_id: favorite.product_id
-                    },
-                    defaults: {
-                        user_id: userId,
-                        section_id: null,
                         product_id: favorite.product_id,
-                        created_at: favorite.created_at
+                        section_id: null
                     }
                 });
     
-                if (created) {
+                if (existingUserFavorite) {
+                    // Nếu favorite đã tồn tại với user_id, xóa bản ghi session
+                    await Favorite.destroy({
+                        where: {
+                            id: favorite.id
+                        }
+                    });
+                    deletedCount++;
+                } else {
+                    // Cập nhật bản ghi hiện tại
+                    await Favorite.update(
+                        {
+                            user_id: userId,
+                            section_id: null
+                        },
+                        {
+                            where: {
+                                id: favorite.id
+                            }
+                        }
+                    );
                     transferredCount++;
                 }
             }
     
-            // Xóa favorites của section và đếm số bản ghi bị xóa
-            deletedCount = await Favorite.destroy({
-                where: { section_id: sectionId }
-            });
-    
-            // Nếu không có bản ghi nào được chuyển hoặc xóa
-            if (transferredCount === 0 && deletedCount === 0) {
-                throw new Error('Không có thay đổi nào được thực hiện');
-            }
+            // Cập nhật các bản ghi có cả user_id và section_id
+            const updatedCount = await Favorite.update(
+                { section_id: null },
+                {
+                    where: {
+                        user_id: userId,
+                        section_id: sectionId
+                    }
+                }
+            );
     
             return {
                 transferred: transferredCount,
+                updated: updatedCount[0],
                 deleted: deletedCount
             };
         } catch (error) {
             throw error;
         }
     }
+    
     
 }
 

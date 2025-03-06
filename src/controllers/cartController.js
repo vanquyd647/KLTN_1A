@@ -5,8 +5,10 @@ const cartService = require('../services/cartService'); // Adjust the path based
 // Create or retrieve a cart for a logged-in user
 const createCartForUser = async (req, res) => {
     try {
-        const { userId } = req;
+        const  userId  = req.userId;
         const sessionId = req.sessionId;
+
+        console.log('222222222222222222222',sessionId);
 
         if (!userId) {
             return res.status(400).json({

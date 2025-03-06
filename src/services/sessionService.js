@@ -5,26 +5,53 @@ const logger = require('../configs/winston');
 const { v4: uuidv4 } = require('uuid');
 
 const sessionService = {
-    /**
-     * Create a new session
-     * @param {Object} data - Session data
-     * @returns {Promise<Object>} - The created session
-     */
+    // Thêm method mới để tìm session dựa trên IP và User Agent
+    async findExistingSession(ipAddress, userAgent) {
+        try {
+            const session = await Session.findOne({
+                where: {
+                    ip_address: ipAddress,
+                    user_agent: userAgent,
+                    status: 'active'
+                },
+                order: [['created_at', 'DESC']] // Lấy session mới nhất
+            });
+            return session;
+        } catch (error) {
+            logger.error('Error finding existing session:', error);
+            return null;
+        }
+    },
+
+    // Cập nhật method createSession
     async createSession(data) {
         try {
-            // Kiểm tra session tồn tại
-            const existingSession = await Session.findByPk(data.session_id);
+            // Kiểm tra session theo session_id
+            if (data.session_id) {
+                const existingSession = await Session.findByPk(data.session_id);
+                if (existingSession) {
+                    // Chỉ cập nhật status và thời gian truy cập
+                    return await existingSession.update({
+                        status: data.status || existingSession.status,
+                        updated_at: new Date()
+                    });
+                }
+            }
+
+            // Kiểm tra session theo IP và User Agent
+            const existingSession = await this.findExistingSession(
+                data.ip_address,
+                data.user_agent
+            );
+
             if (existingSession) {
-                // Cập nhật session hiện có
+                // Trả về session hiện có và cập nhật thời gian
                 return await existingSession.update({
-                    user_id: data.user_id || existingSession.user_id,
-                    ip_address: data.ip_address || existingSession.ip_address,
-                    user_agent: data.user_agent || existingSession.user_agent,
-                    status: data.status || existingSession.status
+                    updated_at: new Date()
                 });
             }
 
-            // Tạo session mới
+            // Chỉ tạo session mới nếu không tìm thấy session nào
             return await Session.create({
                 session_id: data.session_id || uuidv4(),
                 user_id: data.user_id || null,
