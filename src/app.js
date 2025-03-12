@@ -92,7 +92,7 @@ const corsOptions = {
         'Content-Type',
         'Authorization',
         'x-session-id',
-        'ngrok-skip-browser-warning'  
+        'ngrok-skip-browser-warning'
     ],
     exposedHeaders: ['x-session-id'],
     credentials: true,
@@ -140,27 +140,28 @@ logger.info('🚀 Server is starting...');
 sequelize.authenticate()
     .then(() => {
         logger.info('✅ Database connection successful');
-        return initializeTriggers();
-    })
-    .then(() => {
+        // Sync database trước
         return sequelize.sync({ force: false });
     })
     .then(() => {
         logger.info('✅ Tables are created or synchronized!');
-        // Chạy setup Elasticsearch
+        // Tạo triggers sau khi đã có bảng
+        return initializeTriggers();
+    })
+    .then(() => {
+        // Setup Elasticsearch
         return setupElasticsearch();
     })
     .then(() => {
         logger.info('✅ Elasticsearch setup completed');
-        // Tiếp tục khởi tạo roles
         return initRoles();
     })
     .then(() => {
-        logger.info('🔧 Roles initialized successfully');
+        logger.info('\U0001F527 Roles initialized successfully');
         return initCarriers();
     })
     .then(() => {
-        logger.info('🚚 Carriers initialized successfully');
+        logger.info('\U0001F69A Carriers initialized successfully');
     })
     .catch(err => {
         logger.error('❌ Database/Setup error:', err);

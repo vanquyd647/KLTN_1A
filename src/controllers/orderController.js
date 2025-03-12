@@ -211,7 +211,6 @@ class OrderController {
             orderData.items.length > 0);
     }
 
-
     static checkDuplicateItems(items) {
         const uniqueItems = new Set();
         for (const item of items) {

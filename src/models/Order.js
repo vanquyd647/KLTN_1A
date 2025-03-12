@@ -34,6 +34,12 @@ module.exports = (sequelize) => {
             },
             comment: 'ID của mã giảm giá nếu có'
         },
+        discount_amount: {
+            type: DataTypes.DECIMAL(10, 2),
+            allowNull: false,
+            defaultValue: 0,
+            comment: 'Giá giảm giá nếu có'
+        },
         original_price: {
             type: DataTypes.DECIMAL(10, 2),
             allowNull: false,
@@ -56,10 +62,10 @@ module.exports = (sequelize) => {
             ),
             allowNull: false,
             defaultValue: 'pending'
-        },        
+        },
         expires_at: {
             type: DataTypes.DATE,
-            allowNull: true, 
+            allowNull: true,
         },
         created_at: {
             type: DataTypes.DATE,

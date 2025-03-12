@@ -129,7 +129,7 @@ const OrderService = {
                 carrier_id: orderData.carrier_id,
                 coupon_id: orderData.coupon_id,
                 original_price: orderData.original_price,
-                discounted_price: orderData.discounted_price,
+                discount_amount: orderData.discount_amount,
                 final_price: orderData.final_price,
                 status: 'pending',
                 expires_at: new Date(Date.now() + 10 * 60 * 1000)
@@ -225,6 +225,7 @@ const OrderService = {
                     'user_id',
                     'carrier_id',
                     'coupon_id',
+                    'discount_amount',
                     'original_price',                 
                     'final_price',
                     'status',
@@ -423,7 +424,7 @@ const OrderService = {
                 pricing: {
                     original_price: order.original_price,
                     coupon_id: order.coupon_id || '',
-                    discounted_price: order.discounted_price,
+                    discount_amount: order.discount_amount,
                     final_price: order.final_price
                 },
                 shipping: {
@@ -592,7 +593,7 @@ const OrderService = {
                 pricing: {
                     original_price: order.original_price,
                     coupon_id: order.coupon_id || '',
-                    discounted_price: order.discounted_price,
+                    discount_amount: order.discount_amount,
                     final_price: order.final_price
                 },
                 shipping: {
