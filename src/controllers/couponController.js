@@ -30,7 +30,8 @@ const couponController = {
                 minAmount: req.query.minAmount,
                 maxAmount: req.query.maxAmount,
                 sortBy: req.query.sortBy || 'created_at',
-                sortOrder: req.query.sortOrder || 'DESC'
+                sortOrder: req.query.sortOrder || 'DESC',
+                minOrderAmount: req.query.minOrderAmount,
             };
 
             const result = await couponService.getAllCoupons(filters);
@@ -90,6 +91,7 @@ const couponController = {
     validateCoupon: async (req, res) => {
         try {
             const { code } = req.body;
+            const { orderAmount } = req.body;
             if (!code) {
                 return res.status(400).json({
                     code: 400,
@@ -98,11 +100,12 @@ const couponController = {
                 });
             }
 
-            const result = await couponService.validateCoupon(code);
+            const result = await couponService.validateCoupon(code, parseFloat(orderAmount));
             res.json({
                 code: 200,
                 success: true,
                 data: {
+                    orderAmount: parseFloat(orderAmount),
                     ...result,
                     validation_time: new Date()
                 }
@@ -119,6 +122,7 @@ const couponController = {
     applyCoupon: async (req, res) => {
         try {
             const { code } = req.body;
+            const { orderAmount } = req.body;
             if (!code) {
                 return res.status(400).json({
                     code: 400,
@@ -127,7 +131,7 @@ const couponController = {
                 });
             }
 
-            const result = await couponService.applyCoupon(code);
+            const result = await couponService.applyCoupon(code, parseFloat(orderAmount));
             res.json({
                 code: 200,
                 success: true,

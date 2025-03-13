@@ -26,6 +26,12 @@ module.exports = (sequelize) => {
                 min: 0
             }
         },
+        min_order_amount: {
+            type: DataTypes.DECIMAL(10, 2),
+            allowNull: false,
+            defaultValue: 0,
+            comment: 'Số tiền đơn hàng tối thiểu để áp dụng mã'
+        },
         expiry_date: {
             type: DataTypes.DATE,
             allowNull: false

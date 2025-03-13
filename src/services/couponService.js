@@ -1,10 +1,17 @@
 const { Coupon, sequelize } = require('../models'); // Thêm sequelize vào đây
 const { Op } = require('sequelize');
+const redisClient = require('../configs/redisClient');
 
 const couponService = {
     createCoupon: async (couponData) => {
         try {
-            return await Coupon.create(couponData);
+            if (couponData.min_order_amount < 0) {
+                throw new Error('Giá trị đơn hàng tối thiểu không thể âm');
+            }
+            return await Coupon.create({
+                ...couponData,
+                min_order_amount: couponData.min_order_amount || 0 // Mặc định là 0 nếu không có
+            });
         } catch (error) {
             throw error;
         }
@@ -12,9 +19,9 @@ const couponService = {
 
     getAllCoupons: async (filters = {}) => {
         try {
-            const { 
-                page = 1, 
-                limit = 10, 
+            const {
+                page = 1,
+                limit = 10,
                 search,
                 is_active,
                 startDate,
@@ -22,7 +29,8 @@ const couponService = {
                 minAmount,
                 maxAmount,
                 sortBy = 'created_at',
-                sortOrder = 'DESC'
+                sortOrder = 'DESC',
+                min_order_amount
             } = filters;
 
             const offset = (page - 1) * limit;
@@ -63,13 +71,23 @@ const couponService = {
                 }
             }
 
+            if (min_order_amount || min_order_amount) {
+                where.min_order_amount = {};
+                if (min_order_amount) {
+                    where.min_order_amount[Op.gte] = min_order_amount;
+                }
+                if (maxOrderAmount) {
+                    where.min_order_amount[Op.lte] = maxOrderAmount;
+                }
+            }
+
             // Validate sortBy để tránh SQL injection
             const validSortColumns = ['created_at', 'expiry_date', 'discount_amount', 'code'];
             const finalSortBy = validSortColumns.includes(sortBy) ? sortBy : 'created_at';
-            
+
             // Validate sortOrder
-            const finalSortOrder = ['ASC', 'DESC'].includes(sortOrder.toUpperCase()) 
-                ? sortOrder.toUpperCase() 
+            const finalSortOrder = ['ASC', 'DESC'].includes(sortOrder.toUpperCase())
+                ? sortOrder.toUpperCase()
                 : 'DESC';
 
             return await Coupon.findAndCountAll({
@@ -78,7 +96,7 @@ const couponService = {
                 offset: parseInt(offset),
                 order: [[finalSortBy, finalSortOrder]],
                 attributes: [
-                    'id', 'code', 'description', 'discount_amount',
+                    'id', 'code', 'description', 'discount_amount', 'min_order_amount',
                     'expiry_date', 'total_quantity', 'used_quantity',
                     'is_active', 'created_at', 'updated_at'
                 ]
@@ -96,9 +114,8 @@ const couponService = {
         }
     },
 
-    validateCoupon: async (code) => {
+    validateCoupon: async (code, orderAmount) => {
         try {
-            // Thêm logging để debug
             console.log('Validating coupon with code:', code);
 
             const coupon = await Coupon.findOne({
@@ -111,14 +128,18 @@ const couponService = {
                 }
             });
 
-            // Log kết quả tìm kiếm
             console.log('Found coupon:', coupon);
 
             if (!coupon) {
                 throw new Error('Mã giảm giá không hợp lệ hoặc đã hết hạn');
             }
 
-            // Kiểm tra số lượng riêng
+            // Kiểm tra điều kiện đơn hàng tối thiểu
+            if (orderAmount && orderAmount < coupon.min_order_amount) {
+                throw new Error(`Đơn hàng tối thiểu ${coupon.min_order_amount.toLocaleString()}đ để sử dụng mã này`);
+            }
+
+            // Kiểm tra số lượng
             if (coupon.total_quantity > 0 && coupon.used_quantity >= coupon.total_quantity) {
                 throw new Error('Mã giảm giá đã hết lượt sử dụng');
             }
@@ -137,6 +158,7 @@ const couponService = {
                     code: coupon.code,
                     description: coupon.description,
                     discount_amount: coupon.discount_amount,
+                    min_order_amount: coupon.min_order_amount,
                     expiry_date: coupon.expiry_date,
                     remaining_quantity: remainingQuantity,
                     days_until_expiry: daysUntilExpiry,
@@ -150,33 +172,38 @@ const couponService = {
         }
     },
 
+
     // couponService.js
-    applyCoupon: async (code) => {
+    applyCoupon: async (code, orderAmount) => {
         try {
-            // Validate coupon trước
-            const validationResult = await couponService.validateCoupon(code);
+            // Validate coupon với orderAmount
+            const validationResult = await couponService.validateCoupon(code, orderAmount);
             if (!validationResult) {
                 throw new Error('Mã giảm giá không hợp lệ hoặc đã hết hạn');
             }
 
-            // Nếu validate thành công, tìm và cập nhật coupon
             const coupon = await Coupon.findOne({ where: { code } });
+
+            // Kiểm tra điều kiện đơn hàng tối thiểu
+            if (orderAmount < coupon.min_order_amount) {
+                throw new Error(`Đơn hàng tối thiểu ${coupon.min_order_amount.toLocaleString()}đ để sử dụng mã này`);
+            }
 
             if (coupon.total_quantity > 0) {
                 if (coupon.used_quantity >= coupon.total_quantity) {
                     throw new Error('Mã giảm giá đã hết lượt sử dụng');
                 }
                 await coupon.increment('used_quantity', { by: 1 });
-                await coupon.reload(); // Reload để lấy dữ liệu mới nhất
+                await coupon.reload();
             }
 
-            // Trả về thông tin coupon đã được cập nhật
             return {
                 couponInfo: {
                     id: coupon.id,
                     code: coupon.code,
                     description: coupon.description,
                     discount_amount: coupon.discount_amount,
+                    min_order_amount: coupon.min_order_amount,
                     expiry_date: coupon.expiry_date,
                     remaining_quantity: coupon.total_quantity === 0 ?
                         'Không giới hạn' :
@@ -199,6 +226,10 @@ const couponService = {
         try {
             const coupon = await Coupon.findByPk(id);
             if (!coupon) throw new Error('Không tìm thấy mã giảm giá');
+            // Validate min_order_amount khi cập nhật
+            if (updateData.min_order_amount !== undefined && updateData.min_order_amount < 0) {
+                throw new Error('Giá trị đơn hàng tối thiểu không thể âm');
+            }
             return await coupon.update(updateData);
         } catch (error) {
             throw error;
@@ -214,7 +245,30 @@ const couponService = {
         } catch (error) {
             throw error;
         }
-    }
+    },
+
+    setCouponsCache: async (coupons) => {
+        try {
+            await redisClient.setex(
+                CACHE_KEY,
+                CACHE_TTL,
+                JSON.stringify(coupons)
+            );
+        } catch (error) {
+            console.error('Redis cache error:', error);
+        }
+    },
+
+    // Thêm hàm lấy cache
+    getCouponsFromCache: async () => {
+        try {
+            const cachedData = await redisClient.get(CACHE_KEY);
+            return cachedData ? JSON.parse(cachedData) : null;
+        } catch (error) {
+            console.error('Redis cache error:', error);
+            return null;
+        }
+    },
 };
 
 module.exports = couponService;
