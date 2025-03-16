@@ -131,6 +131,7 @@ class FavoriteService {
                 favorites: rows,
                 pagination: {
                     total: count,
+                    currentPage: parseInt(page),
                     page: parseInt(page),
                     limit: parseInt(limit),
                     totalPages: Math.ceil(count / limit)
