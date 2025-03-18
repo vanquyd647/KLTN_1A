@@ -34,6 +34,11 @@ module.exports = (sequelize) => {
             },
             comment: 'ID của mã giảm giá nếu có'
         },
+        shipping_fee: {
+            type: DataTypes.DECIMAL(10, 2),
+            allowNull: false,
+            comment: 'Phí vận chuyển'
+        },
         discount_amount: {
             type: DataTypes.DECIMAL(10, 2),
             allowNull: false,

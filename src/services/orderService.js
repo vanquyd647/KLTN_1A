@@ -128,6 +128,7 @@ const OrderService = {
                 user_id: orderData.user_id,
                 carrier_id: orderData.carrier_id,
                 coupon_id: orderData.coupon_id,
+                shipping_fee: orderData.shipping_fee,
                 original_price: orderData.original_price,
                 discount_amount: orderData.discount_amount,
                 final_price: orderData.final_price,
@@ -225,6 +226,7 @@ const OrderService = {
                     'user_id',
                     'carrier_id',
                     'coupon_id',
+                    'shipping_fee',
                     'discount_amount',
                     'original_price',                 
                     'final_price',
@@ -423,6 +425,7 @@ const OrderService = {
                 status: order.status,
                 pricing: {
                     original_price: order.original_price,
+                    shipping_fee: order.shipping_fee,
                     coupon_id: order.coupon_id || '',
                     discount_amount: order.discount_amount,
                     final_price: order.final_price
