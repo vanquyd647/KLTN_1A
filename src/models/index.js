@@ -29,6 +29,8 @@ const defineRevenue = require('./Revenue');
 const defineFavorite = require('./Favorite');
 const defineCoupon = require('./Coupon');
 const defineBlog = require('./Blog');
+const defineInvoice = require('./Invoice');
+const defineInvoiceItem = require('./InvoiceItem');
 
 
 const models = {
@@ -60,6 +62,8 @@ const models = {
     Favorite: defineFavorite(sequelize),
     Coupon: defineCoupon(sequelize),
     Blog: defineBlog(sequelize),
+    Invoice: defineInvoice(sequelize),
+    InvoiceItem: defineInvoiceItem(sequelize),
 
 
 };
@@ -93,6 +97,8 @@ const {
     Favorite,
     Coupon,
     Blog,
+    Invoice,
+    InvoiceItem,
 } = models;
 
 // Các quan hệ giữa các mô hình
@@ -156,7 +162,7 @@ Order.belongsTo(User, { foreignKey: 'user_id' });
 Order.hasMany(OrderItem, { foreignKey: 'order_id' });
 OrderItem.belongsTo(Order, { foreignKey: 'order_id' });
 
-Order.hasOne(OrderDetails, { foreignKey: 'order_id', as: 'orderDetails' });
+Order.hasMany(OrderDetails, { foreignKey: 'order_id', as: 'orderDetails' });
 OrderDetails.belongsTo(Order, { foreignKey: 'order_id', as: 'order' });
 
 Product.hasMany(OrderItem, { foreignKey: 'product_id' });
@@ -281,6 +287,43 @@ User.hasMany(Blog, {
     foreignKey: 'user_id',
     as: 'blogs'
 });
+
+// Thiết lập quan hệ 1-1 giữa Order và Invoice
+models.Order.hasOne(models.Invoice, { foreignKey: 'order_id' });
+models.Invoice.belongsTo(models.Order, { foreignKey: 'order_id' });
+
+// Thiết lập quan hệ với người tạo và người mua
+models.User.hasMany(models.Invoice, { foreignKey: 'creator_id', as: 'CreatedInvoices' });
+models.Invoice.belongsTo(models.User, { foreignKey: 'creator_id', as: 'Creator' });
+
+models.User.hasMany(models.Invoice, { foreignKey: 'buyer_id', as: 'BoughtInvoices' });
+models.Invoice.belongsTo(models.User, { foreignKey: 'buyer_id', as: 'Buyer' });
+
+// Quan hệ Invoice với InvoiceItem
+Invoice.hasMany(InvoiceItem, {
+    foreignKey: 'invoice_id',
+    as: 'InvoiceItems'
+});
+
+InvoiceItem.belongsTo(Invoice, {
+    foreignKey: 'invoice_id'
+});
+
+// Quan hệ InvoiceItem với Product
+InvoiceItem.belongsTo(Product, {
+    foreignKey: 'product_id'
+});
+
+// Quan hệ InvoiceItem với Size
+InvoiceItem.belongsTo(Size, {
+    foreignKey: 'size_id'
+});
+
+// Quan hệ InvoiceItem với Color
+InvoiceItem.belongsTo(Color, {
+    foreignKey: 'color_id'
+});
+
 
 module.exports = {
     ...models,
