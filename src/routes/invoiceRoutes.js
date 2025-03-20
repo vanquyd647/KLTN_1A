@@ -22,6 +22,6 @@ router.get('/search', adminAuthMiddleware, invoiceController.searchInvoices);
 
 // Tạo và tải file PDF cho hóa đơn
 // GET /api/invoices/:id/pdf
-router.get('/:id/pdf', adminAuthMiddleware, invoiceController.generateInvoicePDF);
+router.get('/:id/pdf/:orderId', adminAuthMiddleware, invoiceController.generateInvoicePDF);
 
 module.exports = router;

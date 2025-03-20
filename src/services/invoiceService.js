@@ -9,6 +9,10 @@ const PDFDocument = require('pdfkit');
 const InvoiceService = {
     // Tạo hóa đơn từ đơn hàng đã hoàn thành
     createInvoice: async (orderId, creatorId, notes = null) => {
+        console.log('orderId:', orderId); // Debugging log
+        console.log('creatorId:', creatorId); // Debugging log
+        console.log('notes:', notes); // Debugging log
+        console.log('OrderService.createInvoice()'); // Debugging log
         const t = await sequelize.transaction();
         let newInvoice;
 
@@ -18,7 +22,7 @@ const InvoiceService = {
                 include: [
                     {
                         model: OrderDetails,
-                        as: 'orderDetails',
+                        as: 'orderDetailss',
                         required: false
                     },
                     { model: User },
@@ -56,13 +60,13 @@ const InvoiceService = {
                 throw new Error('Đơn hàng này đã có hóa đơn');
             }
 
-            // Kiểm tra và log thông tin orderDetails để debug
-            console.log('OrderDetails exists:', !!order.orderDetails);
-            if (order.orderDetails) {
+            // Kiểm tra và log thông tin orderDetailss để debug
+            console.log('OrderDetails exists:', !!order.orderDetailss);
+            if (order.orderDetailss) {
                 console.log('OrderDetails data:', {
-                    name: order.orderDetails.name,
-                    email: order.orderDetails.email,
-                    phone: order.orderDetails.phone
+                    name: order.orderDetailss.name,
+                    email: order.orderDetailss.email,
+                    phone: order.orderDetailss.phone
                 });
             }
 
@@ -84,11 +88,11 @@ const InvoiceService = {
             let buyerName, buyerEmail, buyerPhone, buyerAddress;
 
             // Lấy thông tin từ OrderDetails nếu có
-            if (order.orderDetails && order.orderDetails.length > 0) {
-                buyerName = order.orderDetails[0].name;
-                buyerEmail = order.orderDetails[0].email;
-                buyerPhone = order.orderDetails[0].phone;
-                buyerAddress = `${order.orderDetails[0].street || ''}, ${order.orderDetails[0].ward || ''}, ${order.orderDetails[0].district || ''}, ${order.orderDetails[0].city || ''}, ${order.orderDetails[0].country || ''}`;
+            if (order.orderDetailss && order.orderDetailss.length > 0) {
+                buyerName = order.orderDetailss[0].name;
+                buyerEmail = order.orderDetailss[0].email;
+                buyerPhone = order.orderDetailss[0].phone;
+                buyerAddress = `${order.orderDetailss[0].street || ''}, ${order.orderDetailss[0].ward || ''}, ${order.orderDetailss[0].district || ''}, ${order.orderDetailss[0].city || ''}, ${order.orderDetailss[0].country || ''}`;
             }
 
             // Nếu không có OrderDetails hoặc thiếu thông tin, lấy từ User
@@ -176,6 +180,7 @@ const InvoiceService = {
     },
 
     getInvoiceById: async (invoiceId) => {
+        console.log('invoiceId:', invoiceId); // Debugging log
         try {
             const invoice = await Invoice.findByPk(invoiceId, {
                 include: [
@@ -348,13 +353,50 @@ const InvoiceService = {
     },
 
     // Thêm phương thức tạo file PDF cho hóa đơn
-    // Thêm phương thức tạo file PDF cho hóa đơn
-    generateInvoicePDF: async (invoiceId) => {
+    generateInvoicePDF: async (invoiceId, creator_id, order_id) => {
+        console.log('Service - Starting generateInvoicePDF with params:', {
+            invoiceId,
+            creator_id,
+            order_id
+        });
+
         try {
-            // Lấy thông tin hóa đơn
-            const invoice = await InvoiceService.getInvoiceById(invoiceId);
+            const numericOrderId = parseInt(order_id, 10);
+            const numericInvoiceId = parseInt(invoiceId, 10);
+
+            let invoice = null;
+
+            // Nếu có order_id hợp lệ, thử tạo hóa đơn mới trước
+            if (!isNaN(numericOrderId)) {
+                try {
+                    // Kiểm tra xem đã có hóa đơn cho đơn hàng này chưa
+                    const existingInvoice = await Invoice.findOne({
+                        where: { order_id: numericOrderId }
+                    });
+
+                    if (existingInvoice) {
+                        invoice = await InvoiceService.getInvoiceById(existingInvoice.id);
+                        console.log('Found existing invoice:', invoice);
+                    } else {
+                        // Tạo hóa đơn mới nếu chưa có
+                        invoice = await InvoiceService.createInvoice(numericOrderId, creator_id);
+                        console.log('Created new invoice:', invoice);
+                    }
+                } catch (error) {
+                    console.error('Error creating/finding invoice:', error);
+                    throw new Error(`Không thể tạo/tìm hóa đơn: ${error.message}`);
+                }
+            }
+
+            // Nếu có invoiceId hợp lệ và chưa có invoice, thử tìm theo invoiceId
+            if (!invoice && !isNaN(numericInvoiceId)) {
+                invoice = await InvoiceService.getInvoiceById(numericInvoiceId);
+                console.log('Found invoice by ID:', invoice);
+            }
+
+            // Nếu vẫn không tìm thấy hóa đơn
             if (!invoice) {
-                throw new Error('Hóa đơn không tồn tại');
+                throw new Error('Không thể tìm thấy hoặc tạo hóa đơn');
             }
 
             // Tạo đường dẫn và tên file
@@ -373,9 +415,9 @@ const InvoiceService = {
                 margin: 50,
                 size: 'A4',
                 info: {
-                    Title: `Hóa đơn ${invoice.invoice_number}`,
+                    Title: `Hoa don ${invoice.invoice_number}`,
                     Author: 'Fashion Shop',
-                    Subject: 'Hóa đơn bán hàng',
+                    Subject: 'Hoa don ban hang',
                     Producer: 'Fashion Shop',
                     CreationDate: new Date()
                 }
@@ -384,7 +426,26 @@ const InvoiceService = {
             const stream = fs.createWriteStream(filePath);
             doc.pipe(stream);
 
-            // Sử dụng font hệ thống 
+            // Hàm chuyển đổi tiếng Việt có dấu sang không dấu
+            function removeVietnameseAccents(str) {
+                if (!str) return '';
+                str = str.replace(/à|á|ạ|ả|ã|â|ầ|ấ|ậ|ẩ|ẫ|ă|ằ|ắ|ặ|ẳ|ẵ/g, "a");
+                str = str.replace(/è|é|ẹ|ẻ|ẽ|ê|ề|ế|ệ|ể|ễ/g, "e");
+                str = str.replace(/ì|í|ị|ỉ|ĩ/g, "i");
+                str = str.replace(/ò|ó|ọ|ỏ|õ|ô|ồ|ố|ộ|ổ|ỗ|ơ|ờ|ớ|ợ|ở|ỡ/g, "o");
+                str = str.replace(/ù|ú|ụ|ủ|ũ|ư|ừ|ứ|ự|ử|ữ/g, "u");
+                str = str.replace(/ỳ|ý|ỵ|ỷ|ỹ/g, "y");
+                str = str.replace(/đ/g, "d");
+                str = str.replace(/À|Á|Ạ|Ả|Ã|Â|Ầ|Ấ|Ậ|Ẩ|Ẫ|Ă|Ằ|Ắ|Ặ|Ẳ|Ẵ/g, "A");
+                str = str.replace(/È|É|Ẹ|Ẻ|Ẽ|Ê|Ề|Ế|Ệ|Ể|Ễ/g, "E");
+                str = str.replace(/Ì|Í|Ị|Ỉ|Ĩ/g, "I");
+                str = str.replace(/Ò|Ó|Ọ|Ỏ|Õ|Ô|Ồ|Ố|Ộ|Ổ|Ỗ|Ơ|Ờ|Ớ|Ợ|Ở|Ỡ/g, "O");
+                str = str.replace(/Ù|Ú|Ụ|Ủ|Ũ|Ư|Ừ|Ứ|Ự|Ử|Ữ/g, "U");
+                str = str.replace(/Ỳ|Ý|Ỵ|Ỷ|Ỹ/g, "Y");
+                str = str.replace(/Đ/g, "D");
+                return str;
+            }
+
             doc.font('Helvetica');
 
             // Tạo tiêu đề
@@ -401,20 +462,21 @@ const InvoiceService = {
             // Thông tin người bán (sử dụng thông tin Creator)
             doc.fontSize(14).font('Helvetica-Bold').text('Thong tin nguoi ban');
             if (invoice.Creator) {
-                doc.fontSize(12).font('Helvetica').text(`Ten: ${invoice.Creator.firstname} ${invoice.Creator.lastname}`);
+                const sellerName = invoice.Creator.firstname + ' ' + invoice.Creator.lastname;
+                doc.fontSize(12).font('Helvetica').text(`Ten: ${removeVietnameseAccents(sellerName)}`);
                 doc.text(`Email: ${invoice.Creator.email}`);
             } else {
-                doc.fontSize(12).font('Helvetica').text('Cong ty TNHH Thuong mai Fashion Shop');
+                doc.fontSize(12).font('Helvetica').text('Ten: Fashion Shop');
             }
             doc.text('Dia chi: 123 Duong ABC, Phuong XYZ, Quan 1, TP. Ho Chi Minh');
-            doc.text('So dien thoai: 1900 1234');
-            doc.text('MST: 0123456789');
+            doc.text('So dien thoai: 0999 999 999');
+            doc.text('MST: xxxxxxxxxx');
             doc.moveDown();
 
-            // Thông tin người mua
+            // Thông tin người mua - chuyển sang không dấu
             doc.fontSize(14).font('Helvetica-Bold').text('Thong tin nguoi mua');
-            doc.fontSize(12).font('Helvetica').text(`Ten: ${invoice.buyer_name}`);
-            doc.text(`Dia chi: ${invoice.buyer_address}`);
+            doc.fontSize(12).font('Helvetica').text(`Ten: ${removeVietnameseAccents(invoice.buyer_name)}`);
+            doc.text(`Dia chi: ${removeVietnameseAccents(invoice.buyer_address)}`);
             doc.text(`Email: ${invoice.buyer_email}`);
             doc.text(`So dien thoai: ${invoice.buyer_phone}`);
             doc.moveDown();
@@ -442,25 +504,19 @@ const InvoiceService = {
 
             let y = tableTop + 25;
 
-            // Table body - Xử lý InvoiceItems
+            // Table body - Xử lý InvoiceItems và tránh trùng lặp
             doc.font('Helvetica');
+            const processedItems = new Map(); // Sử dụng Map để theo dõi sản phẩm đã xử lý
+
             if (invoice.InvoiceItems && invoice.InvoiceItems.length > 0) {
-                for (let i = 0; i < invoice.InvoiceItems.length; i++) {
-                    const item = invoice.InvoiceItems[i];
-
-                    // Kiểm tra nếu sắp hết trang thì tạo trang mới
-                    if (y > 700) {
-                        doc.addPage();
-                        y = 50;
-                    }
-
-                    // Truy cập dữ liệu từ quan hệ lồng nhau một cách an toàn
+                // Gộp các item giống nhau
+                for (const item of invoice.InvoiceItems) {
                     let productName = 'San pham khong xac dinh';
                     let size = '';
                     let color = '';
 
                     if (item.Product) {
-                        productName = item.Product.product_name || productName;
+                        productName = removeVietnameseAccents(item.Product.product_name || '');
                     }
 
                     if (item.Size) {
@@ -468,23 +524,61 @@ const InvoiceService = {
                     }
 
                     if (item.Color) {
-                        color = item.Color.color || '';
+                        color = removeVietnameseAccents(item.Color.color || '');
                     }
 
-                    const variantText = size || color ? ` (${size}${color ? ', ' + color : ''})` : '';
-
-                    // Lấy ra giá và số lượng
+                    const itemKey = `${productName}-${size}-${color}`;
                     const price = parseFloat(item.price || 0);
                     const quantity = parseInt(item.quantity || 0, 10);
-                    const lineTotal = price * quantity;
 
-                    doc.text((i + 1).toString(), tableLeft, y);
-                    doc.text(productName + variantText, tableLeft + colWidths[0], y, { width: colWidths[1] });
-                    doc.text(price.toLocaleString('vi-VN') + ' d', tableLeft + colWidths[0] + colWidths[1], y, { width: colWidths[2], align: 'right' });
-                    doc.text(quantity.toString(), tableLeft + colWidths[0] + colWidths[1] + colWidths[2], y, { width: colWidths[3], align: 'center' });
-                    doc.text(lineTotal.toLocaleString('vi-VN') + ' d', tableLeft + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3], y, { width: colWidths[4], align: 'right' });
+                    if (processedItems.has(itemKey)) {
+                        const existingItem = processedItems.get(itemKey);
+                        existingItem.quantity += quantity;
+                        existingItem.lineTotal += price * quantity;
+                    } else {
+                        processedItems.set(itemKey, {
+                            productName,
+                            size,
+                            color,
+                            price,
+                            quantity,
+                            lineTotal: price * quantity
+                        });
+                    }
+                }
 
-                    y += 20;
+                // Render các item đã gộp
+                let index = 1;
+                for (const [_, item] of processedItems) {
+                    // Kiểm tra nếu sắp hết trang thì tạo trang mới
+                    if (y > 700) {
+                        doc.addPage();
+                        y = 50;
+                    }
+
+                    const variantText = item.size || item.color ?
+                        ` (${item.size}${item.color ? ', ' + item.color : ''})` : '';
+
+                    const productFullName = item.productName + variantText;
+
+                    // Tính toán chiều cao của dòng text dựa trên chiều rộng và font hiện tại
+                    const productNameWidth = colWidths[1];
+                    const textHeight = doc.heightOfString(productFullName, {
+                        width: productNameWidth
+                    });
+
+                    // Thêm padding giữa các dòng
+                    const lineHeight = Math.max(textHeight, 20); // Tối thiểu 20 đơn vị
+
+                    doc.text(index.toString(), tableLeft, y);
+                    doc.text(productFullName, tableLeft + colWidths[0], y, { width: productNameWidth });
+                    doc.text(item.price.toLocaleString('vi-VN') + ' d', tableLeft + colWidths[0] + colWidths[1], y, { width: colWidths[2], align: 'right' });
+                    doc.text(item.quantity.toString(), tableLeft + colWidths[0] + colWidths[1] + colWidths[2], y, { width: colWidths[3], align: 'center' });
+                    doc.text(item.lineTotal.toLocaleString('vi-VN') + ' d', tableLeft + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3], y, { width: colWidths[4], align: 'right' });
+
+                    // Dùng chiều cao thực tế để tính vị trí dòng tiếp theo
+                    y += lineHeight + 10; // Thêm 10 đơn vị khoảng cách giữa các dòng
+                    index++;
                 }
             } else {
                 doc.text('Khong co san pham', tableLeft, y);
@@ -497,7 +591,7 @@ const InvoiceService = {
                 .stroke();
             y += 15;
 
-            const summaryColWidth = 200;
+            const summaryColWidth = 250;
             const totalLeft = doc.page.width - summaryColWidth - 50;
 
             // Chuyển đổi các giá trị tiền từ chuỗi sang số thực
@@ -541,16 +635,22 @@ const InvoiceService = {
 
             // Phương thức thanh toán
             let paymentMethodText = 'Khong xac dinh';
-            if (invoice.payment_method === 'cash_on_delivery') {
-                paymentMethodText = 'Thanh toan khi nhan hang';
-            } else if (invoice.payment_method === 'bank_transfer') {
-                paymentMethodText = 'Chuyen khoan ngan hang';
-            } else if (invoice.payment_method === 'credit_card') {
-                paymentMethodText = 'The tin dung';
-            } else if (invoice.payment_method === 'momo') {
-                paymentMethodText = 'Vi dien tu MoMo';
-            } else if (invoice.payment_method === 'zalopay') {
-                paymentMethodText = 'ZaloPay';
+            switch (invoice.payment_method) {
+                case 'cash_on_delivery':
+                    paymentMethodText = 'Thanh toan khi nhan hang';
+                    break;
+                case 'bank_transfer':
+                    paymentMethodText = 'Chuyen khoan ngan hang';
+                    break;
+                case 'credit_card':
+                    paymentMethodText = 'The tin dung';
+                    break;
+                case 'momo':
+                    paymentMethodText = 'Vi dien tu MoMo';
+                    break;
+                case 'payos':
+                    paymentMethodText = 'PayOS';
+                    break;
             }
 
             doc.font('Helvetica');
@@ -563,14 +663,19 @@ const InvoiceService = {
                 y += 20;
 
                 let orderStatus = 'Khong xac dinh';
-                if (invoice.Order.status === 'completed') {
-                    orderStatus = 'Da hoan thanh';
-                } else if (invoice.Order.status === 'processing') {
-                    orderStatus = 'Dang xu ly';
-                } else if (invoice.Order.status === 'shipped') {
-                    orderStatus = 'Dang van chuyen';
-                } else if (invoice.Order.status === 'cancelled') {
-                    orderStatus = 'Da huy';
+                switch (invoice.Order.status) {
+                    case 'completed':
+                        orderStatus = 'Da hoan thanh';
+                        break;
+                    case 'processing':
+                        orderStatus = 'Dang xu ly';
+                        break;
+                    case 'shipped':
+                        orderStatus = 'Dang van chuyen';
+                        break;
+                    case 'cancelled':
+                        orderStatus = 'Da huy';
+                        break;
                 }
 
                 doc.text(`Trang thai don hang: ${orderStatus}`, tableLeft, y);
@@ -579,7 +684,7 @@ const InvoiceService = {
 
             // Ghi chú
             if (invoice.notes) {
-                doc.text(`Ghi chu: ${invoice.notes}`, tableLeft, y);
+                doc.text(`Ghi chu: ${removeVietnameseAccents(invoice.notes)}`, tableLeft, y);
                 y += 20;
             }
 
@@ -611,11 +716,6 @@ const InvoiceService = {
             throw error;
         }
     }
-
-
-
-
-
 
 
 };

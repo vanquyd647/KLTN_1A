@@ -104,8 +104,13 @@ const InvoiceController = {
     // Tạo file PDF cho hóa đơn
     generateInvoicePDF: async (req, res) => {
         try {
+            const { orderId } = req.params;
+            const creatorId = req.userId;
             const { id } = req.params;
-            const pdfPath = await invoiceService.generateInvoicePDF(id);
+
+            console.log('order_id', orderId);
+
+            const pdfPath = await invoiceService.generateInvoicePDF(id, creatorId, orderId);
 
             // Kiểm tra xem file có tồn tại không
             if (!fs.existsSync(pdfPath)) {
