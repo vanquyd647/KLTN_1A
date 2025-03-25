@@ -26,6 +26,7 @@ const paymentRoute = require('./routes/paymentRoutes');
 const worker = require('./services/orderWorker');
 const initRoles = require('./scripts/initRoles');
 const initCarriers = require('./scripts/initCarriers');
+const initCategories = require('./scripts/initCategories');
 const setupElasticsearch = require('./scripts/setup-elasticsearch');
 const { updateIsNewStatus } = require('./crons/updateIsNewStatus');
 const productStockRoutes = require('./routes/productStockRoutes');
@@ -128,7 +129,12 @@ app.use(cookieParser());
 app.use(rateLimiter);
 app.use(ensureSession);
 app.use(compression());
-app.use(express.json());
+app.use(express.json({limit: '50mb'}));
+app.use(express.urlencoded({
+    limit: '50mb',
+    extended: true,
+    parameterLimit: 50000
+}));
 app.use(cors(corsOptions));
 app.use(errorHandler);
 // API Documentation
@@ -163,6 +169,10 @@ sequelize.authenticate()
     })
     .then(() => {
         logger.info('\U0001F69A Carriers initialized successfully');
+        return initCategories();
+    })
+    .then(() => {
+        logger.info('\U0001F69A Categories initialized successfully');
     })
     .catch(err => {
         logger.error('❌ Database/Setup error:', err);
@@ -211,17 +221,6 @@ cron.schedule('0 2 * * *', () => {
     logger.info('🔄 Running is_new update cron job...');
     updateIsNewStatus();
 });
-
-// // Khởi tạo dữ liệu roles & carriers nếu chưa có
-// (async () => {
-//     await initRoles();
-//     logger.info('🔧 Roles initialized successfully');
-// })();
-
-// (async () => {
-//     await initCarriers();
-//     logger.info('🚚 Carriers initialized successfully');
-// })();
 
 // Khởi động worker và log
 logger.info('⚙️ Order worker started...');

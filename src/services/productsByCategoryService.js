@@ -28,6 +28,7 @@ const productByCategoryService = {
         try {
             const offset = (page - 1) * limit;
 
+            // Xác định thứ tự sắp xếp
             let order = [];
             switch (sort) {
                 case 'featured':
@@ -55,18 +56,35 @@ const productByCategoryService = {
                     order.push(['created_at', 'DESC']);
             }
 
+            // Xây dựng điều kiện lọc theo giá
             let whereClause = {};
             if (priceRange) {
                 const [minPrice, maxPrice] = priceRange.split('-').map(Number);
                 whereClause.price = { [Op.between]: [minPrice, maxPrice] };
             }
 
-            let colorFilter = {};
-            if (colorIds?.length > 0) {
-                colorFilter = { id: { [Op.in]: colorIds } };
-            }
+            // Query để đếm tổng số sản phẩm
+            const totalCount = await Product.count({
+                where: whereClause,
+                distinct: true,
+                include: [
+                    {
+                        model: Category,
+                        as: 'categories',
+                        through: { attributes: [] },
+                        where: { id: categoryId },
+                    },
+                    colorIds?.length > 0 ? {
+                        model: Color,
+                        as: 'productColors',
+                        where: { id: { [Op.in]: colorIds } },
+                        through: { attributes: [] },
+                    } : null,
+                ].filter(Boolean),
+            });
 
-            const { count, rows } = await Product.findAndCountAll({
+            // Query để lấy danh sách sản phẩm theo trang
+            const products = await Product.findAll({
                 where: whereClause,
                 include: [
                     {
@@ -80,7 +98,7 @@ const productByCategoryService = {
                         as: 'productColors',
                         attributes: ['id', 'color', 'hex_code'],
                         through: { attributes: ['image'] },
-                        where: colorFilter,
+                        where: colorIds?.length > 0 ? { id: { [Op.in]: colorIds } } : undefined,
                     },
                     {
                         model: Size,
@@ -97,12 +115,14 @@ const productByCategoryService = {
                 order,
             });
 
+            // Trả về kết quả với thông tin phân trang
             return {
-                total: count,
+                total: totalCount,
                 currentPage: page,
-                totalPages: Math.ceil(count / limit),
-                products: rows,
+                totalPages: Math.ceil(totalCount / limit),
+                products: products,
             };
+
         } catch (error) {
             logger.error('Error fetching products by category:', error);
             console.error('Error fetching products by category:', error);

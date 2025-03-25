@@ -461,13 +461,9 @@ const InvoiceService = {
 
             // Thông tin người bán (sử dụng thông tin Creator)
             doc.fontSize(14).font('Helvetica-Bold').text('Thong tin nguoi ban');
-            if (invoice.Creator) {
-                const sellerName = invoice.Creator.firstname + ' ' + invoice.Creator.lastname;
-                doc.fontSize(12).font('Helvetica').text(`Ten: ${removeVietnameseAccents(sellerName)}`);
-                doc.text(`Email: ${invoice.Creator.email}`);
-            } else {
-                doc.fontSize(12).font('Helvetica').text('Ten: Fashion Shop');
-            }
+
+            doc.fontSize(12).font('Helvetica').text('Ten: Fashion Shop');
+
             doc.text('Dia chi: 123 Duong ABC, Phuong XYZ, Quan 1, TP. Ho Chi Minh');
             doc.text('So dien thoai: 0999 999 999');
             doc.text('MST: xxxxxxxxxx');
@@ -656,31 +652,6 @@ const InvoiceService = {
             doc.font('Helvetica');
             doc.text(`Phuong thuc thanh toan: ${paymentMethodText}`, tableLeft, y);
             y += 20;
-
-            // Thông tin đơn hàng
-            if (invoice.Order) {
-                doc.text(`Ma don hang: #${invoice.Order.id}`, tableLeft, y);
-                y += 20;
-
-                let orderStatus = 'Khong xac dinh';
-                switch (invoice.Order.status) {
-                    case 'completed':
-                        orderStatus = 'Da hoan thanh';
-                        break;
-                    case 'processing':
-                        orderStatus = 'Dang xu ly';
-                        break;
-                    case 'shipped':
-                        orderStatus = 'Dang van chuyen';
-                        break;
-                    case 'cancelled':
-                        orderStatus = 'Da huy';
-                        break;
-                }
-
-                doc.text(`Trang thai don hang: ${orderStatus}`, tableLeft, y);
-                y += 20;
-            }
 
             // Ghi chú
             if (invoice.notes) {
