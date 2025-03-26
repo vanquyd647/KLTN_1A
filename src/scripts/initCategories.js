@@ -280,26 +280,28 @@ const categories = [
  */
 const initCategories = async () => {
     try {
-        // Xóa dữ liệu từ bảng product_categories trước
-        await ProductCategory.destroy({
-            where: {},
-            force: true
+        // Kiểm tra categories đã tồn tại
+        const existingCategories = await Category.findAll({
+            attributes: ['id', 'name']
         });
 
-        // Sau đó mới xóa dữ liệu từ bảng categories
-        await Category.destroy({
-            where: {},
-            force: true
-        });
+        // Lọc ra các categories chưa tồn tại
+        const existingIds = existingCategories.map(cat => cat.id);
+        const categoriesToAdd = categories.filter(cat => !existingIds.includes(cat.id));
 
-        // Thêm categories mới
-        await Category.bulkCreate(categories, {
-            validate: true,
-            returning: true
-        });
+        if (categoriesToAdd.length > 0) {
+            // Chỉ thêm các categories mới
+            await Category.bulkCreate(categoriesToAdd, {
+                validate: true,
+                returning: true
+            });
+            logger.info(`✅ Added ${categoriesToAdd.length} new categories successfully`);
+            console.log(`✅ Added ${categoriesToAdd.length} new categories successfully`);
+        } else {
+            logger.info('✅ All categories already exist. No new categories added.');
+            console.log('✅ All categories already exist. No new categories added.');
+        }
 
-        logger.info('✅ Categories initialized successfully');
-        console.log('✅ Categories initialized successfully');
     } catch (error) {
         logger.error('❌ Error initializing categories:', error);
         console.error('❌ Error initializing categories:', error);
