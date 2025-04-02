@@ -3,59 +3,86 @@
 const productService = require('../services/productService');
 const redisClient = require('../configs/redisClient');
 
-// Hàm thêm sản phẩm mới
-const createProduct = async (req, res) => {
+// Hàm helper để tạo filter key một cách nhất quán
+const createFilterKey = (filter) => {
+    if (!filter || Object.keys(filter).length === 0) return 'no_filter';
+
+    return Object.entries(filter)
+        .filter(([_, value]) => value !== null && value !== undefined) // Loại bỏ các giá trị null/undefined
+        .sort(([keyA], [keyB]) => keyA.localeCompare(keyB)) // Sắp xếp key
+        .map(([key, value]) => {
+            if (value === '') return `${key}_empty`;
+            if (Array.isArray(value)) return `${key}_${value.join('-')}`;
+            return `${key}_${value}`;
+        })
+        .join('_');
+};
+
+// Danh sách các filter phổ biến
+const commonFilters = [
+    {}, // không filter
+    { name: '' },
+    { priceRange: '0-100000' },
+    { priceRange: '100000-500000' },
+    { priceRange: '500000-1000000' },
+    { priceRange: '1000000-up' },
+    { sort: 'newest' },
+    { sort: 'price_asc' },
+    { sort: 'price_desc' },
+    { sort: 'name_asc' },
+    { sort: 'name_desc' }
+];
+
+// Hàm xóa cache chung
+const clearProductCache = async (slug = null) => {
     try {
-        const productData = req.body;
-
-        const newProduct = await productService.createProduct(productData);
-
-        // Xóa tất cả cache liên quan
         const deleteKeys = [
             'product_stocks',
-            'products',
-            `product_${newProduct[0].slug}`,
+            'products'
         ];
 
-        // Xóa cache cho các trang phân trang
+        if (slug) {
+            deleteKeys.push(`product_${slug}`);
+        }
+
         const pages = Array.from({ length: 10 }, (_, i) => i + 1);
         const limits = [5, 10, 20, 50];
 
-        // Thêm mới: Các filter phổ biến cần xóa cache
-        const commonFilters = [
-            {}, // không filter
-            { name: '' },
-            { priceRange: '0-100000' },
-            { priceRange: '100000-500000' },
-            { priceRange: '500000-1000000' },
-            { priceRange: '1000000-up' },
-            { sort: 'newest' },
-            { sort: 'price_asc' },
-            { sort: 'price_desc' },
-            { sort: 'name_asc' },
-            { sort: 'name_desc' }
-        ];
-
         pages.forEach(page => {
             limits.forEach(limit => {
-                // Cache keys cho pagination cơ bản
+                // Cache keys cơ bản
                 deleteKeys.push(
                     `products_page_${page}_limit_${limit}`,
                     `new_products_page_${page}_limit_${limit}`,
                     `featured_products_page_${page}_limit_${limit}`
                 );
 
-                // Thêm cache keys cho các filter phổ biến
+                // Cache keys cho các filter
                 commonFilters.forEach(filter => {
+                    const filterKey = createFilterKey(filter);
                     deleteKeys.push(
-                        `products_page_${page}_limit_${limit}_filters_${JSON.stringify(filter)}`
+                        `products_page_${page}_limit_${limit}_filters_${filterKey}`
                     );
                 });
             });
         });
 
-        // Xóa tất cả các key cache
+        // Xóa tất cả cache
         await Promise.all(deleteKeys.map(key => redisClient.del(key)));
+        console.log('Đã xóa cache:', deleteKeys);
+    } catch (error) {
+        console.error('Lỗi khi xóa cache:', error);
+        throw error;
+    }
+};
+
+// Hàm thêm sản phẩm mới
+const createProduct = async (req, res) => {
+    try {
+        const productData = req.body;
+        const newProduct = await productService.createProduct(productData);
+        await clearProductCache();
+
         return res.status(201).json({
             status: 'success',
             code: 201,
@@ -195,53 +222,7 @@ const updateProduct = async (req, res) => {
         }
 
         const updatedProduct = await productService.updateProduct(slug, productData);
-
-        // Xóa tất cả cache liên quan
-        const deleteKeys = [
-            'product_stocks',
-            'products',
-            `product_${slug}`
-        ];
-
-        // Xóa cache cho các trang phân trang
-        const pages = Array.from({ length: 10 }, (_, i) => i + 1);
-        const limits = [5, 10, 20, 50];
-
-        // Thêm mới: Các filter phổ biến cần xóa cache
-        const commonFilters = [
-            {}, // không filter
-            { name: '' },
-            { priceRange: '0-100000' },
-            { priceRange: '100000-500000' },
-            { priceRange: '500000-1000000' },
-            { priceRange: '1000000-up' },
-            { sort: 'newest' },
-            { sort: 'price_asc' },
-            { sort: 'price_desc' },
-            { sort: 'name_asc' },
-            { sort: 'name_desc' }
-        ];
-
-        pages.forEach(page => {
-            limits.forEach(limit => {
-                // Cache keys cho pagination cơ bản
-                deleteKeys.push(
-                    `products_page_${page}_limit_${limit}`,
-                    `new_products_page_${page}_limit_${limit}`,
-                    `featured_products_page_${page}_limit_${limit}`
-                );
-
-                // Thêm cache keys cho các filter phổ biến
-                commonFilters.forEach(filter => {
-                    deleteKeys.push(
-                        `products_page_${page}_limit_${limit}_filters_${JSON.stringify(filter)}`
-                    );
-                });
-            });
-        });
-
-        // Xóa tất cả các key cache
-        await Promise.all(deleteKeys.map(key => redisClient.del(key)));
+        await clearProductCache(slug);
 
         return res.status(200).json({
             status: 'success',
@@ -265,31 +246,7 @@ const deleteProduct = async (req, res) => {
     try {
         const { slug } = req.params;
         const deleteMessage = await productService.deleteProduct(slug);
-
-        // Xóa cache sản phẩm cũ trong Redis để khi truy vấn lại sẽ lấy dữ liệu mới
-        redisClient.del(`product_${slug}`);
-        // Xóa tất cả cache liên quan
-        const deleteKeys = [
-            'product_stocks', // Cache cho tồn kho sản phẩm
-            'products', // Cache cho danh sách sản phẩm
-        ];
-
-        // Xóa cache cho các trang phân trang
-        const pages = Array.from({ length: 10 }, (_, i) => i + 1); // Giả sử có 10 trang
-        const limits = [5, 10, 20, 50]; // Các limit phổ biến
-
-        pages.forEach(page => {
-            limits.forEach(limit => {
-                deleteKeys.push(
-                    `products_page_${page}_limit_${limit}`,
-                    `new_products_page_${page}_limit_${limit}`,
-                    `featured_products_page_${page}_limit_${limit}`
-                );
-            });
-        });
-
-        // Xóa tất cả các key cache
-        await Promise.all(deleteKeys.map(key => redisClient.del(key)));
+        await clearProductCache(slug);
 
         return res.status(200).json({
             status: 'success',
@@ -324,9 +281,11 @@ const getProductsByPagination = async (req, res) => {
             sort: req.query.sort || 'newest'
         };
 
-        const cacheKey = `products_page_${page}_limit_${limit}_filters_${JSON.stringify(filters)}`;
-        const cachedProducts = await redisClient.get(cacheKey);
+        const filterKey = createFilterKey(filters);
+        const cacheKey = `products_page_${page}_limit_${limit}_filters_${filterKey}`;
 
+        // Kiểm tra cache
+        const cachedProducts = await redisClient.get(cacheKey);
         if (cachedProducts) {
             return res.status(200).json({
                 status: 'success',
@@ -336,6 +295,7 @@ const getProductsByPagination = async (req, res) => {
             });
         }
 
+        // Nếu không có cache, query từ DB
         const products = await productService.getProductsByPagination({ page, limit, filters });
 
         if (!products || products.products.length === 0) {
@@ -347,6 +307,7 @@ const getProductsByPagination = async (req, res) => {
             });
         }
 
+        // Lưu vào cache
         await redisClient.set(cacheKey, JSON.stringify(products), {
             EX: 3600,
         });
@@ -367,6 +328,7 @@ const getProductsByPagination = async (req, res) => {
         });
     }
 };
+
 
 
 // API for New Products with Pagination

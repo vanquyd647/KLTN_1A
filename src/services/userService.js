@@ -287,6 +287,15 @@ const userService = {
             const { password, roles, ...otherData } = userData;
             const hashedPassword = await bcrypt.hash(password, 10);
 
+            // Kiểm tra email đã tồn tại
+            const existingUser = await User.findOne({
+                where: { email: otherData.email }
+            });
+
+            if (existingUser) {
+                throw new Error('Email này đã được sử dụng. Vui lòng chọn email khác.');
+            }
+
             // Validate roles
             if (!roles || !Array.isArray(roles)) {
                 throw new Error('Roles must be provided as an array');

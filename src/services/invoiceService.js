@@ -614,7 +614,7 @@ const InvoiceService = {
                 doc.font('Helvetica-Bold');
                 doc.text('Giam gia:', totalLeft, y, { width: summaryColWidth - 100, align: 'left' });
                 doc.font('Helvetica');
-                doc.text('-' + discountAmount.toLocaleString('vi-VN') + ' d', totalLeft + summaryColWidth - 100, y, { width: 100, align: 'right' });
+                doc.text(discountAmount.toLocaleString('vi-VN') + ' d', totalLeft + summaryColWidth - 100, y, { width: 100, align: 'right' });
                 y += 20;
             }
 

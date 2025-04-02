@@ -134,9 +134,16 @@ const couponService = {
                 throw new Error('Mã giảm giá không hợp lệ hoặc đã hết hạn');
             }
 
+            const formatCurrency = (amount) => {
+                return new Intl.NumberFormat('vi-VN', {
+                    style: 'decimal',
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0
+                }).format(amount);
+            };
             // Kiểm tra điều kiện đơn hàng tối thiểu
             if (orderAmount && orderAmount < coupon.min_order_amount) {
-                throw new Error(`Đơn hàng tối thiểu ${coupon.min_order_amount.toLocaleString()}đ để sử dụng mã này`);
+                throw new Error(`Đơn hàng tối thiểu ${formatCurrency(coupon.min_order_amount)}đ để sử dụng mã này`);
             }
 
             // Kiểm tra số lượng
