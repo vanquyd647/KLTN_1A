@@ -76,7 +76,8 @@ const orderTrackingService = {
                     originalPrice: orderInfo.original_price,
                     discountAmount: orderInfo.discount_amount,
                     discountCode: orderInfo.discount_code,
-                    finalPrice: orderInfo.final_price
+                    finalPrice: orderInfo.final_price,
+                    shippingFee: orderInfo.shipping_fee,
                 },
                 customerInfo: {
                     name: orderInfo.orderDetails.name,
