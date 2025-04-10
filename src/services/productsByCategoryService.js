@@ -128,6 +128,47 @@ const productByCategoryService = {
             console.error('Error fetching products by category:', error);
             throw new Error('Unable to fetch products by category');
         }
+    },
+    
+    updateProductCategories: async (productId, categoryIds) => {
+        try {
+            const product = await Product.findByPk(productId);
+
+            if (!product) {
+                throw new Error('Product not found');
+            }
+
+            // Kiểm tra các danh mục tồn tại
+            const categories = await Category.findAll({
+                where: {
+                    id: {
+                        [Op.in]: categoryIds
+                    }
+                }
+            });
+
+            if (categories.length !== categoryIds.length) {
+                throw new Error('One or more categories not found');
+            }
+
+            // Cập nhật quan hệ nhiều-nhiều
+            await product.setCategories(categoryIds);
+
+            // Lấy thông tin sản phẩm sau khi cập nhật
+            const updatedProduct = await Product.findByPk(productId, {
+                include: [{
+                    model: Category,
+                    as: 'categories',
+                    through: { attributes: [] }
+                }]
+            });
+
+            return updatedProduct;
+
+        } catch (error) {
+            logger.error('Error updating product categories:', error);
+            throw error;
+        }
     }
 };
 

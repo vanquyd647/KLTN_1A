@@ -33,4 +33,66 @@ const getProductsByCategory = async (req, res) => {
     }
 };
 
-module.exports = { getProductsByCategory };
+const updateProductCategories = async (req, res) => {
+    const { productId } = req.params;
+    const { categoryIds } = req.body;
+
+    try {
+        // Validate input
+        if (!Array.isArray(categoryIds)) {
+            return res.status(400).json({
+                status: 'error',
+                code: 400,
+                message: 'categoryIds phải là một mảng',
+            });
+        }
+
+        if (categoryIds.length === 0) {
+            return res.status(400).json({
+                status: 'error',
+                code: 400,
+                message: 'Phải có ít nhất một danh mục',
+            });
+        }
+
+        const updatedProduct = await productByCategoryService.updateProductCategories(
+            parseInt(productId, 10),
+            categoryIds
+        );
+
+        return res.status(200).json({
+            status: 'success',
+            code: 200,
+            message: 'Cập nhật danh mục sản phẩm thành công',
+            data: updatedProduct,
+        });
+
+    } catch (error) {
+        console.error('Error updating product categories:', error);
+        
+        if (error.message === 'Product not found') {
+            return res.status(404).json({
+                status: 'error',
+                code: 404,
+                message: 'Không tìm thấy sản phẩm',
+            });
+        }
+
+        if (error.message === 'One or more categories not found') {
+            return res.status(404).json({
+                status: 'error',
+                code: 404,
+                message: 'Một hoặc nhiều danh mục không tồn tại',
+            });
+        }
+
+        return res.status(500).json({
+            status: 'error',
+            code: 500,
+            message: 'Lỗi máy chủ khi cập nhật danh mục sản phẩm',
+            error: error.message,
+        });
+    }
+};
+
+module.exports = { getProductsByCategory, updateProductCategories };
