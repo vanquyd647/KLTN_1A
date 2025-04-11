@@ -71,15 +71,15 @@ const userService = {
         });
 
         if (!user) {
-            logger.error('User not found');
-            throw new Error('User not found');
+            logger.error('Không tìm thấy người dùng');
+            throw new Error('Không tìm thấy người dùng');
         }
 
         const isPasswordValid = await bcrypt.compare(password, user.password);
 
         if (!isPasswordValid) {
-            logger.error('Invalid password');
-            throw new Error('Invalid password');
+            logger.error('Mật khẩu không hợp lệ');
+            throw new Error('Mật khẩu không hợp lệ');
         }
 
         // Kiểm tra và xử lý cart
@@ -260,11 +260,12 @@ const userService = {
             const users = rows.map(user => ({
                 id: user.id,
                 email: user.email,
+                password: user.password,
                 firstname: user.firstname,
                 lastname: user.lastname,
                 phone: user.phone,
                 gender: user.gender,
-                roles: user.userRoles.map(ur => ur.role.role_name), // Cập nhật cách truy cập
+                roles: user.userRoles.map(ur => ur.role.role_name),
                 created_at: user.created_at
             }));
 
