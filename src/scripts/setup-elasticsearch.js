@@ -4,12 +4,6 @@ const elasticClient = require('../configs/elasticsearch');
 const { Product, Color } = require('../models');
 const logger = require('../configs/winston');
 
-const ELASTICSEARCH_ERRORS = {
-    TIMEOUT: 'ETIMEDOUT',
-    CONNECTION_REFUSED: 'ECONNREFUSED',
-    NO_LIVING_CONNECTIONS: 'No Living connections'
-};
-
 async function checkConnection() {
     let isConnected = false;
     const maxAttempts = 10;

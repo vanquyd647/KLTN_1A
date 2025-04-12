@@ -2,6 +2,7 @@
 
 const productService = require('../services/productService');
 const redisClient = require('../configs/redisClient');
+const setupElasticsearch = require('../scripts/setup-elasticsearch');
 
 // Hàm helper để tạo filter key một cách nhất quán
 const createFilterKey = (filter) => {
@@ -82,6 +83,7 @@ const createProduct = async (req, res) => {
         const productData = req.body;
         const newProduct = await productService.createProduct(productData);
         await clearProductCache();
+        await setupElasticsearch();
 
         return res.status(201).json({
             status: 'success',
@@ -223,6 +225,7 @@ const updateProduct = async (req, res) => {
 
         const updatedProduct = await productService.updateProduct(slug, productData);
         await clearProductCache(slug);
+        await setupElasticsearch();
 
         return res.status(200).json({
             status: 'success',
@@ -247,6 +250,7 @@ const deleteProduct = async (req, res) => {
         const { slug } = req.params;
         const deleteMessage = await productService.deleteProduct(slug);
         await clearProductCache(slug);
+        await setupElasticsearch();
 
         return res.status(200).json({
             status: 'success',

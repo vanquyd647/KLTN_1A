@@ -27,6 +27,7 @@ const worker = require('./services/orderWorker');
 const initRoles = require('./scripts/initRoles');
 const initCarriers = require('./scripts/initCarriers');
 const initCategories = require('./scripts/initCategories');
+const initCoupons = require('./scripts/initCoupons');
 const setupElasticsearch = require('./scripts/setup-elasticsearch');
 const { updateIsNewStatus } = require('./crons/updateIsNewStatus');
 const productStockRoutes = require('./routes/productStockRoutes');
@@ -39,6 +40,7 @@ const couponRoutes = require('./routes/couponRoutes');
 const revenueRoutes = require('./routes/revenueRoute');
 const invoiceRoutes = require('./routes/invoiceRoutes');
 const categoryRoutes = require('./routes/categoryRoute');
+
 const { createRevenueTrigger, checkTrigger } = require('./db/triggers');
 const client = require('prom-client');
 
@@ -174,6 +176,10 @@ sequelize.authenticate()
     })
     .then(() => {
         logger.info('\U0001F69A Categories initialized successfully');
+        return initCoupons();
+    })
+    .then(() => {
+        logger.info('\U0001F69A Coupon initialized successfully');
     })
     .catch(err => {
         logger.error('❌ Database/Setup error:', err);
@@ -217,6 +223,7 @@ app.use('/v1/api/coupons', couponRoutes);
 app.use('/v1/api/revenue', revenueRoutes);
 app.use('/v1/api/invoices', invoiceRoutes);
 app.use('/v1/api/categories', categoryRoutes);
+
 
 // Schedule Cron job: Update is_new status mỗi ngày lúc 2:00 AM
 cron.schedule('0 2 * * *', () => {
