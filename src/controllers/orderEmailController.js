@@ -70,7 +70,7 @@ const orderEmailController = {
                     </table>
 
                     <div style="text-align: right; margin-top: 20px;">
-                        <p>Phí vận chuyển: ${orderDetails.data.original_price.toLocaleString('vi-VN')}đ</p>
+                        <p>Giá thành sản phẩm: ${orderDetails.data.original_price.toLocaleString('vi-VN')}đ</p>
                         <p>Phí vận chuyển: ${orderDetails.data.shipping_fee.toLocaleString('vi-VN')}đ</p>
                         <p>Giảm giá: ${orderDetails.data.discount_amount.toLocaleString('vi-VN')}đ</p>
                         <h3>Tổng thanh toán: ${(orderDetails.data.amount).toLocaleString('vi-VN')}đ</h3>

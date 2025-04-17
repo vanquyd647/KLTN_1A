@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 
-const { register, verifyOtp, login, loginForAdmin, logout, getUserProfile, refreshToken, updateUserProfile, forgotPassword, resetPassword, getAllUsers, createUser, updateUser, deleteUser } = require('../controllers/userController');
+const { register, verifyOtp, login, loginForAdmin, logout, getUserProfile, refreshToken, updateUserProfile, forgotPassword, resetPassword, getAllUsers, createUser, updateUser, deleteUser, resendOtp } = require('../controllers/userController');
 const authMiddleware = require('../middlewares/authMiddleware');
 const adminAuthMiddleware = require('../middlewares/adminAuthMiddleware');
 
@@ -423,6 +423,36 @@ router.post('/admin/users', adminAuthMiddleware, createUser);
  *       - bearerAuth: []
  */
 router.put('/admin/users/:id', adminAuthMiddleware, updateUser);
+
+
+/**
+ * @swagger
+ * /v1/api/users/resend-otp:
+ *   post:
+ *     summary: Resend OTP
+ *     tags: [Users]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: OTP has been sent successfully
+ *       400:
+ *         description: Invalid email
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Server error
+ */
+router.post('/resend-otp', resendOtp);
 
 
 module.exports = router;

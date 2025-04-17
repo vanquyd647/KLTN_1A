@@ -1,5 +1,5 @@
 // orderTrackingService.js
-const { Order, OrderDetails, OrderItem, Product, Color, Size, Category } = require('../models');
+const { Order, OrderDetails, OrderItem, Product, Color, Size, Category, Payment } = require('../models');
 
 const orderTrackingService = {
     async trackOrder(orderId, identifier) {
@@ -15,6 +15,10 @@ const orderTrackingService = {
                             [identifier.includes('@') ? 'email' : 'phone']: identifier
                         },
                         required: true
+                    },
+                    {
+                        model: Payment,
+                        attributes: ['payment_method', 'payment_status', 'payment_amount', 'transaction_id', 'payment_date']
                     },
                     {
                         model: OrderItem,
@@ -49,7 +53,7 @@ const orderTrackingService = {
                                         through: { attributes: [] }
                                     }
                                 ]
-                            },
+                            },             
                             {
                                 model: Color,
                                 attributes: ['id', 'color', 'hex_code']
@@ -57,8 +61,9 @@ const orderTrackingService = {
                             {
                                 model: Size,
                                 attributes: ['id', 'size']
-                            }
+                            },
                         ]
+
                     }
                 ]
             });
@@ -72,6 +77,11 @@ const orderTrackingService = {
                 orderInfo: {
                     orderId: orderInfo.id,
                     orderStatus: orderInfo.status,
+                    paymentMethod: orderInfo.Payment.payment_method,
+                    paymentStatus: orderInfo.Payment.payment_status,
+                    paymentDate: orderInfo.Payment.payment_date,
+                    transactionId: orderInfo.Payment.transaction_id,
+                    paymentAmount: orderInfo.Payment.payment_amount,
                     orderDate: orderInfo.created_at,
                     originalPrice: orderInfo.original_price,
                     discountAmount: orderInfo.discount_amount,

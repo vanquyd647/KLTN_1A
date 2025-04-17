@@ -17,6 +17,7 @@ const createRevenueTrigger = async () => {
                 DECLARE payment_exists INT;
                 DECLARE payment_amount DECIMAL(10,2);
                 DECLARE payment_id BIGINT;
+                DECLARE revenue_exists INT;
 
                 -- Kiểm tra xem có payment nào đã paid chưa
                 SELECT p.id, p.payment_amount, COUNT(*)
@@ -26,10 +27,18 @@ const createRevenueTrigger = async () => {
                 AND p.payment_status = 'paid'
                 LIMIT 1;
 
-                -- Nếu order chuyển sang completed và có payment đã paid
+                -- Kiểm tra xem đã tồn tại trong revenues chưa
+                SELECT COUNT(*)
+                INTO revenue_exists
+                FROM revenues
+                WHERE order_id = NEW.id 
+                AND payment_id = payment_id;
+
+                -- Nếu order chuyển sang completed và có payment đã paid và chưa có trong revenues
                 IF NEW.status = 'completed' 
                    AND OLD.status != 'completed'
-                   AND payment_exists > 0 THEN
+                   AND payment_exists > 0 
+                   AND revenue_exists = 0 THEN
                     
                     INSERT INTO revenues (
                         order_id,
@@ -44,10 +53,7 @@ const createRevenueTrigger = async () => {
                         payment_id,
                         NOW(),
                         NOW()
-                    )
-                    ON DUPLICATE KEY UPDATE
-                        amount = payment_amount,
-                        updated_at = NOW();
+                    );
                 END IF;
             END;
         `);
@@ -59,16 +65,25 @@ const createRevenueTrigger = async () => {
             FOR EACH ROW
             BEGIN
                 DECLARE order_status VARCHAR(20);
+                DECLARE revenue_exists INT;
                 
                 -- Lấy status của order
                 SELECT status INTO order_status
                 FROM orders 
                 WHERE id = NEW.order_id;
 
-                -- Nếu payment chuyển sang paid và order đã completed
+                -- Kiểm tra xem đã tồn tại trong revenues chưa
+                SELECT COUNT(*)
+                INTO revenue_exists
+                FROM revenues
+                WHERE order_id = NEW.order_id 
+                AND payment_id = NEW.id;
+
+                -- Nếu payment chuyển sang paid và order đã completed và chưa có trong revenues
                 IF NEW.payment_status = 'paid' 
                    AND OLD.payment_status != 'paid'
-                   AND order_status = 'completed' THEN
+                   AND order_status = 'completed' 
+                   AND revenue_exists = 0 THEN
                     
                     INSERT INTO revenues (
                         order_id,
@@ -83,10 +98,7 @@ const createRevenueTrigger = async () => {
                         NEW.id,
                         NOW(),
                         NOW()
-                    )
-                    ON DUPLICATE KEY UPDATE
-                        amount = NEW.payment_amount,
-                        updated_at = NOW();
+                    );
                 END IF;
             END;
         `);

@@ -108,6 +108,49 @@ const verifyOtp = async (req, res) => {
     }
 };
 
+const resendOtp = async (req, res) => {
+    try {
+        const { email } = req.body;
+
+        // Kiểm tra email có tồn tại trong userStore không
+        const userData = userStore.get(email);
+        if (!userData) {
+            return res.status(400).json({
+                status: 'error',
+                code: 400,
+                message: 'Email không tồn tại trong phiên đăng ký. Vui lòng thực hiện đăng ký lại.',
+                data: null
+            });
+        }
+
+        // Tạo mã OTP mới
+        const newOtp = OtpService.generateOtp();
+
+        // Lưu OTP mới
+        OtpService.saveOtp(email, newOtp);
+
+        // Gửi email chứa OTP mới
+        await EmailService.sendOtpEmail(email, newOtp);
+
+        res.status(200).json({
+            status: 'success',
+            code: 200,
+            message: 'Mã OTP mới đã được gửi đến email của bạn.',
+            data: null
+        });
+
+    } catch (error) {
+        console.error('Lỗi khi gửi lại OTP:', error.message);
+        res.status(500).json({
+            status: 'error',
+            code: 500,
+            message: 'Có lỗi xảy ra khi gửi lại mã OTP.',
+            data: null
+        });
+    }
+};
+
+
 const login = async (req, res) => {
     try {
         const { email, password } = req.body;
@@ -368,6 +411,8 @@ const forgotPassword = async (req, res) => {
         // Tạo và lưu OTP
         const otp = OtpService.generateOtp();
         OtpService.saveOtp(email, otp);
+         // Sửa lại cách lưu vào userStore
+         userStore.set(email, { email }); // Lưu thông tin email vào userStore
 
         // Gửi email chứa OTP
         await EmailService.sendPasswordResetOtp(email, otp);
@@ -409,6 +454,7 @@ const resetPassword = async (req, res) => {
 
         // Xóa OTP đã sử dụng
         OtpService.clearOtp(email);
+        userStore.delete(email);
 
         res.status(200).json({
             status: 'success',
@@ -546,5 +592,6 @@ module.exports = {
     getAllUsers,
     createUser,
     updateUser,
-    deleteUser
+    deleteUser,
+    resendOtp
 };
