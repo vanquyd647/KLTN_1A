@@ -90,7 +90,9 @@ const corsOptions = {
         'http://localhost:5173',
         'https://kltn-1-b.vercel.app',
         'https://*.ngrok.io',
-        'https://*.ngrok-free.app'
+        'https://*.ngrok-free.app',
+        'http://172.16.0.170:3000'
+
     ],
     methods: 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
     allowedHeaders: [

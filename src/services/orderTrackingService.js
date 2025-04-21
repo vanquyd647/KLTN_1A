@@ -77,11 +77,13 @@ const orderTrackingService = {
                 orderInfo: {
                     orderId: orderInfo.id,
                     orderStatus: orderInfo.status,
-                    paymentMethod: orderInfo.Payment.payment_method,
-                    paymentStatus: orderInfo.Payment.payment_status,
-                    paymentDate: orderInfo.Payment.payment_date,
-                    transactionId: orderInfo.Payment.transaction_id,
-                    paymentAmount: orderInfo.Payment.payment_amount,
+                    ...(orderInfo.Payment && {
+                        paymentMethod: orderInfo.Payment.payment_method,
+                        paymentStatus: orderInfo.Payment.payment_status,
+                        paymentDate: orderInfo.Payment.payment_date,
+                        transactionId: orderInfo.Payment.transaction_id,
+                        paymentAmount: orderInfo.Payment.payment_amount,
+                    }),
                     orderDate: orderInfo.created_at,
                     originalPrice: orderInfo.original_price,
                     discountAmount: orderInfo.discount_amount,
