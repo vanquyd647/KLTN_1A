@@ -28,7 +28,7 @@ const PaymentService = {
                 throw new Error('Số tiền không hợp lệ');
             }
 
-            const YOUR_DOMAIN = process.env.FRONTEND_URL || 'http://localhost:3000';
+            const YOUR_DOMAIN = process.env.FRONTEND_URL || 'http://kltn-1-b.vercel.app';
 
             // Prepare payment data - sử dụng UUID trực tiếp
             const paymentData = {

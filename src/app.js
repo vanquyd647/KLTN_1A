@@ -28,6 +28,7 @@ const initRoles = require('./scripts/initRoles');
 const initCarriers = require('./scripts/initCarriers');
 const initCategories = require('./scripts/initCategories');
 const initCoupons = require('./scripts/initCoupons');
+const initDefaultUser = require('./scripts/initDefaultUser');
 const setupElasticsearch = require('./scripts/setup-elasticsearch');
 const { updateIsNewStatus } = require('./crons/updateIsNewStatus');
 const productStockRoutes = require('./routes/productStockRoutes');
@@ -134,7 +135,7 @@ app.use(cookieParser());
 app.use(rateLimiter);
 app.use(ensureSession);
 app.use(compression());
-app.use(express.json({limit: '50mb'}));
+app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({
     limit: '50mb',
     extended: true,
@@ -182,6 +183,13 @@ sequelize.authenticate()
     })
     .then(() => {
         logger.info('\U0001F69A Coupon initialized successfully');
+    })
+    .then(() => {
+        logger.info('\U0001F69A Coupon initialized successfully');
+        return initDefaultUser();
+    })
+    .then(() => {
+        logger.info('👤 Default user initialized successfully');
     })
     .catch(err => {
         logger.error('❌ Database/Setup error:', err);
