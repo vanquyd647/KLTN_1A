@@ -156,7 +156,7 @@ const productService = {
         try {
             return await Product.findAll({
                 where: {
-                    status: { [Op.ne]: 'discontinued' },
+                    status: { [Op.notIn]: ['discontinued', 'out_of_stock'] },
                 },
                 include: [
                     {
@@ -378,7 +378,7 @@ const productService = {
             // Bộ lọc giá
             const whereClause = {
                 is_new: true,
-                status: { [Op.ne]: 'discontinued' },
+                status: { [Op.notIn]: ['discontinued', 'out_of_stock'] },
             };
             if (priceRange) {
                 const [minPrice, maxPrice] = priceRange.split('-').map(Number);
@@ -486,7 +486,7 @@ const productService = {
             // Bộ lọc giá
             const whereClause = {
                 is_featured: true,
-                status: { [Op.ne]: 'discontinued' },
+                status: { [Op.notIn]: ['discontinued', 'out_of_stock'] },
             };
             if (priceRange) {
                 const [minPrice, maxPrice] = priceRange.split('-').map(Number);
@@ -575,7 +575,7 @@ const productService = {
             const totalItems = await Product.count({
                 where: {
                     is_new: true,
-                    status: { [Op.ne]: 'discontinued' },
+                    status: { [Op.notIn]: ['discontinued', 'out_of_stock'] },
                 },
             });
 
@@ -654,7 +654,7 @@ const productService = {
             const totalItems = await Product.count({
                 where: {
                     is_featured: true,
-                    status: { [Op.ne]: 'discontinued' },
+                    status: { [Op.notIn]: ['discontinued', 'out_of_stock'] },
                 },
             });
 

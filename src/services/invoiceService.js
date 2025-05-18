@@ -6,6 +6,15 @@ const fs = require('fs');
 const path = require('path');
 const PDFDocument = require('pdfkit');
 
+const FONTS = {
+    Roboto: {
+        normal: path.join(__dirname, '../../fonts/Roboto-Regular.ttf'),
+        bold: path.join(__dirname, '../../fonts/Roboto-Bold.ttf'),
+        italic: path.join(__dirname, '../../fonts/Roboto-Italic.ttf'),
+        bolditalics: path.join(__dirname, '../../fonts/Roboto-BoldItalic.ttf')
+    }
+};
+
 const InvoiceService = {
     // Tạo hóa đơn từ đơn hàng đã hoàn thành
     createInvoice: async (orderId, creatorId, notes = null) => {
@@ -410,75 +419,89 @@ const InvoiceService = {
 
             const filePath = path.join(invoicesDir, fileName);
 
-            // Khởi tạo document PDF
+            // Khởi tạo document PDF với font Roboto
             const doc = new PDFDocument({
                 margin: 50,
                 size: 'A4',
                 info: {
-                    Title: `Hoa don ${invoice.invoice_number}`,
+                    Title: `Hóa đơn ${invoice.invoice_number}`,
                     Author: 'Fashion Shop',
-                    Subject: 'Hoa don ban hang',
+                    Subject: 'Hóa đơn bán hàng',
                     Producer: 'Fashion Shop',
                     CreationDate: new Date()
                 }
             });
 
+            // Đăng ký fonts
+            doc.registerFont('Roboto', FONTS.Roboto.normal);
+            doc.registerFont('Roboto-Bold', FONTS.Roboto.bold);
+
             const stream = fs.createWriteStream(filePath);
             doc.pipe(stream);
 
-            // Hàm chuyển đổi tiếng Việt có dấu sang không dấu
-            function removeVietnameseAccents(str) {
-                if (!str) return '';
-                str = str.replace(/à|á|ạ|ả|ã|â|ầ|ấ|ậ|ẩ|ẫ|ă|ằ|ắ|ặ|ẳ|ẵ/g, "a");
-                str = str.replace(/è|é|ẹ|ẻ|ẽ|ê|ề|ế|ệ|ể|ễ/g, "e");
-                str = str.replace(/ì|í|ị|ỉ|ĩ/g, "i");
-                str = str.replace(/ò|ó|ọ|ỏ|õ|ô|ồ|ố|ộ|ổ|ỗ|ơ|ờ|ớ|ợ|ở|ỡ/g, "o");
-                str = str.replace(/ù|ú|ụ|ủ|ũ|ư|ừ|ứ|ự|ử|ữ/g, "u");
-                str = str.replace(/ỳ|ý|ỵ|ỷ|ỹ/g, "y");
-                str = str.replace(/đ/g, "d");
-                str = str.replace(/À|Á|Ạ|Ả|Ã|Â|Ầ|Ấ|Ậ|Ẩ|Ẫ|Ă|Ằ|Ắ|Ặ|Ẳ|Ẵ/g, "A");
-                str = str.replace(/È|É|Ẹ|Ẻ|Ẽ|Ê|Ề|Ế|Ệ|Ể|Ễ/g, "E");
-                str = str.replace(/Ì|Í|Ị|Ỉ|Ĩ/g, "I");
-                str = str.replace(/Ò|Ó|Ọ|Ỏ|Õ|Ô|Ồ|Ố|Ộ|Ổ|Ỗ|Ơ|Ờ|Ớ|Ợ|Ở|Ỡ/g, "O");
-                str = str.replace(/Ù|Ú|Ụ|Ủ|Ũ|Ư|Ừ|Ứ|Ự|Ử|Ữ/g, "U");
-                str = str.replace(/Ỳ|Ý|Ỵ|Ỷ|Ỹ/g, "Y");
-                str = str.replace(/Đ/g, "D");
-                return str;
-            }
+            // Sử dụng font mặc định là Roboto
+            doc.font('Roboto');
 
-            doc.font('Helvetica');
+            // Header
+            doc.image(path.join(__dirname, '../public/images/logo.png'), 50, 45, { width: 100 })
+                .fontSize(20)
+                .font('Roboto-Bold')
+                .text('FASHION SHOP', 160, 55)
+                .fontSize(10)
+                .font('Roboto')
+                .text('Website: www.kltn-1-b.vercel.app/', 160, 80)
+                .text('Email: contact@fashionshop.com', 160, 95)
+                .text('Hotline: 1900 xxxx', 160, 110);
 
-            // Tạo tiêu đề
-            doc.fontSize(20).font('Helvetica-Bold').text('HOA DON BAN HANG', { align: 'center' });
-            doc.moveDown();
+            // Vẽ đường kẻ ngang
+            doc.moveTo(50, 140)
+                .lineTo(550, 140)
+                .stroke();
+
+            // Tiêu đề
+            doc.fontSize(20)
+                .font('Roboto-Bold')
+                .text('HÓA ĐƠN BÁN HÀNG', 50, 160, { align: 'center', width: 500 });
 
             // Thông tin hóa đơn
-            doc.fontSize(12).font('Helvetica').text(`Ma hoa don: ${invoice.invoice_number}`);
+            doc.fontSize(12)
+                .font('Roboto')
+                .text(`Mã hóa đơn: ${invoice.invoice_number}`, 50, 200);
             const issueDate = new Date(invoice.issue_date);
-            doc.text(`Ngay phat hanh: ${issueDate.getDate()}/${issueDate.getMonth() + 1}/${issueDate.getFullYear()}`);
-            doc.text(`Trang thai thanh toan: ${invoice.payment_status === 'completed' ? 'Da thanh toan' : 'Chua thanh toan'}`);
+            doc.text(`Ngày phát hành: ${issueDate.getDate()}/${issueDate.getMonth() + 1}/${issueDate.getFullYear()}`, 50);
+            doc.text(`Trạng thái thanh toán: ${invoice.payment_status === 'completed' ? 'Đã thanh toán' : 'Chưa thanh toán'}`, 50);
+
+            // Thông tin người bán
             doc.moveDown();
+            doc.fontSize(14)
+                .font('Roboto-Bold')
+                .text('Thông tin người bán', 50);
 
-            // Thông tin người bán (sử dụng thông tin Creator)
-            doc.fontSize(14).font('Helvetica-Bold').text('Thong tin nguoi ban');
+            doc.fontSize(12)
+                .font('Roboto')
+                .text('Tên: Fashion Shop', 50)
+                .text('Địa chỉ: 123 Đường ABC, Phường XYZ, Quận 1, TP. Hồ Chí Minh', 50)
+                .text('Số điện thoại: 0999 999 999', 50)
+                .text('MST: xxxxxxxxxx', 50);
 
-            doc.fontSize(12).font('Helvetica').text('Ten: Fashion Shop');
-
-            doc.text('Dia chi: 123 Duong ABC, Phuong XYZ, Quan 1, TP. Ho Chi Minh');
-            doc.text('So dien thoai: 0999 999 999');
-            doc.text('MST: xxxxxxxxxx');
+            // Thông tin người mua
             doc.moveDown();
+            doc.fontSize(14)
+                .font('Roboto-Bold')
+                .text('Thông tin người mua', 50);
 
-            // Thông tin người mua - chuyển sang không dấu
-            doc.fontSize(14).font('Helvetica-Bold').text('Thong tin nguoi mua');
-            doc.fontSize(12).font('Helvetica').text(`Ten: ${removeVietnameseAccents(invoice.buyer_name)}`);
-            doc.text(`Dia chi: ${removeVietnameseAccents(invoice.buyer_address)}`);
-            doc.text(`Email: ${invoice.buyer_email}`);
-            doc.text(`So dien thoai: ${invoice.buyer_phone}`);
-            doc.moveDown();
+            doc.fontSize(12)
+                .font('Roboto')
+                .text(`Tên: ${invoice.buyer_name}`, 50)
+                .text(`Địa chỉ: ${invoice.buyer_address}`, 50)
+                .text(`Email: ${invoice.buyer_email}`, 50)
+                .text(`Số điện thoại: ${invoice.buyer_phone}`, 50);
 
             // Thông tin đơn hàng
-            doc.fontSize(14).font('Helvetica-Bold').text('Chi tiet don hang');
+            doc.moveDown();
+            doc.fontSize(14)
+                .font('Roboto-Bold')
+                .text('Chi tiết đơn hàng', 50);
             doc.moveDown();
 
             // Table header
@@ -486,43 +509,33 @@ const InvoiceService = {
             const tableLeft = 50;
             const colWidths = [40, 200, 80, 40, 120];
 
-            doc.font('Helvetica-Bold');
+            doc.font('Roboto-Bold');
             doc.text('STT', tableLeft, tableTop);
-            doc.text('San pham', tableLeft + colWidths[0], tableTop);
-            doc.text('Don gia', tableLeft + colWidths[0] + colWidths[1], tableTop, { width: colWidths[2], align: 'right' });
-            doc.text('SL', tableLeft + colWidths[0] + colWidths[1] + colWidths[2], tableTop, { width: colWidths[3], align: 'center' });
-            doc.text('Thanh tien', tableLeft + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3], tableTop, { width: colWidths[4], align: 'right' });
+            doc.text('Sản phẩm', tableLeft + colWidths[0], tableTop);
+            doc.text('Đơn giá', tableLeft + colWidths[0] + colWidths[1], tableTop,
+                { width: colWidths[2], align: 'right' });
+            doc.text('SL', tableLeft + colWidths[0] + colWidths[1] + colWidths[2], tableTop,
+                { width: colWidths[3], align: 'center' });
+            doc.text('Thành tiền', tableLeft + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3], tableTop,
+                { width: colWidths[4], align: 'right' });
 
             // Vẽ đường kẻ dưới header
             doc.moveTo(tableLeft, tableTop + 15)
-                .lineTo(tableLeft + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + colWidths[4], tableTop + 15)
+                .lineTo(tableLeft + colWidths.reduce((a, b) => a + b, 0), tableTop + 15)
                 .stroke();
 
             let y = tableTop + 25;
 
-            // Table body - Xử lý InvoiceItems và tránh trùng lặp
-            doc.font('Helvetica');
-            const processedItems = new Map(); // Sử dụng Map để theo dõi sản phẩm đã xử lý
+            // Table body
+            doc.font('Roboto');
+            const processedItems = new Map();
 
             if (invoice.InvoiceItems && invoice.InvoiceItems.length > 0) {
                 // Gộp các item giống nhau
                 for (const item of invoice.InvoiceItems) {
-                    let productName = 'San pham khong xac dinh';
-                    let size = '';
-                    let color = '';
-
-                    if (item.Product) {
-                        productName = removeVietnameseAccents(item.Product.product_name || '');
-                    }
-
-                    if (item.Size) {
-                        size = item.Size.size || '';
-                    }
-
-                    if (item.Color) {
-                        color = removeVietnameseAccents(item.Color.color || '');
-                    }
-
+                    const productName = item.Product ? item.Product.product_name : 'Sản phẩm không xác định';
+                    const size = item.Size ? item.Size.size : '';
+                    const color = item.Color ? item.Color.color : '';
                     const itemKey = `${productName}-${size}-${color}`;
                     const price = parseFloat(item.price || 0);
                     const quantity = parseInt(item.quantity || 0, 10);
@@ -546,7 +559,6 @@ const InvoiceService = {
                 // Render các item đã gộp
                 let index = 1;
                 for (const [_, item] of processedItems) {
-                    // Kiểm tra nếu sắp hết trang thì tạo trang mới
                     if (y > 700) {
                         doc.addPage();
                         y = 50;
@@ -554,108 +566,108 @@ const InvoiceService = {
 
                     const variantText = item.size || item.color ?
                         ` (${item.size}${item.color ? ', ' + item.color : ''})` : '';
-
                     const productFullName = item.productName + variantText;
 
-                    // Tính toán chiều cao của dòng text dựa trên chiều rộng và font hiện tại
-                    const productNameWidth = colWidths[1];
                     const textHeight = doc.heightOfString(productFullName, {
-                        width: productNameWidth
+                        width: colWidths[1]
                     });
 
-                    // Thêm padding giữa các dòng
-                    const lineHeight = Math.max(textHeight, 20); // Tối thiểu 20 đơn vị
+                    const lineHeight = Math.max(textHeight, 20);
 
                     doc.text(index.toString(), tableLeft, y);
-                    doc.text(productFullName, tableLeft + colWidths[0], y, { width: productNameWidth });
-                    doc.text(item.price.toLocaleString('vi-VN') + ' d', tableLeft + colWidths[0] + colWidths[1], y, { width: colWidths[2], align: 'right' });
-                    doc.text(item.quantity.toString(), tableLeft + colWidths[0] + colWidths[1] + colWidths[2], y, { width: colWidths[3], align: 'center' });
-                    doc.text(item.lineTotal.toLocaleString('vi-VN') + ' d', tableLeft + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3], y, { width: colWidths[4], align: 'right' });
+                    doc.text(productFullName, tableLeft + colWidths[0], y, { width: colWidths[1] });
+                    doc.text(item.price.toLocaleString('vi-VN') + ' đ',
+                        tableLeft + colWidths[0] + colWidths[1], y,
+                        { width: colWidths[2], align: 'right' });
+                    doc.text(item.quantity.toString(),
+                        tableLeft + colWidths[0] + colWidths[1] + colWidths[2], y,
+                        { width: colWidths[3], align: 'center' });
+                    doc.text(item.lineTotal.toLocaleString('vi-VN') + ' đ',
+                        tableLeft + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3], y,
+                        { width: colWidths[4], align: 'right' });
 
-                    // Dùng chiều cao thực tế để tính vị trí dòng tiếp theo
-                    y += lineHeight + 10; // Thêm 10 đơn vị khoảng cách giữa các dòng
+                    y += lineHeight + 10;
                     index++;
                 }
             } else {
-                doc.text('Khong co san pham', tableLeft, y);
+                doc.text('Không có sản phẩm', tableLeft, y);
                 y += 20;
             }
 
-            // Phần tổng - vẽ đường kẻ ngăn cách
+            // Phần tổng
             doc.moveTo(tableLeft, y)
-                .lineTo(tableLeft + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + colWidths[4], y)
+                .lineTo(tableLeft + colWidths.reduce((a, b) => a + b, 0), y)
                 .stroke();
             y += 15;
 
             const summaryColWidth = 250;
             const totalLeft = doc.page.width - summaryColWidth - 50;
 
-            // Chuyển đổi các giá trị tiền từ chuỗi sang số thực
             const originalPrice = parseFloat(invoice.original_price || 0);
             const shippingFee = parseFloat(invoice.shipping_fee || 0);
             const discountAmount = parseFloat(invoice.discount_amount || 0);
             const finalPrice = parseFloat(invoice.final_price || 0);
 
-            doc.font('Helvetica-Bold');
-            doc.text('Tam tinh:', totalLeft, y, { width: summaryColWidth - 100, align: 'left' });
-            doc.font('Helvetica');
-            doc.text(originalPrice.toLocaleString('vi-VN') + ' d', totalLeft + summaryColWidth - 100, y, { width: 100, align: 'right' });
+            // Tổng tiền
+            doc.font('Roboto-Bold')
+                .text('Tạm tính:', totalLeft, y, { width: summaryColWidth - 100, align: 'left' });
+            doc.font('Roboto')
+                .text(originalPrice.toLocaleString('vi-VN') + ' đ',
+                    totalLeft + summaryColWidth - 100, y,
+                    { width: 100, align: 'right' });
             y += 20;
 
-            if (shippingFee >= 0) {
-                doc.font('Helvetica-Bold');
-                doc.text('Phi van chuyen:', totalLeft, y, { width: summaryColWidth - 100, align: 'left' });
-                doc.font('Helvetica');
-                doc.text(shippingFee.toLocaleString('vi-VN') + ' d', totalLeft + summaryColWidth - 100, y, { width: 100, align: 'right' });
+            if (shippingFee > 0) {
+                doc.font('Roboto-Bold')
+                    .text('Phí vận chuyển:', totalLeft, y, { width: summaryColWidth - 100, align: 'left' });
+                doc.font('Roboto')
+                    .text(shippingFee.toLocaleString('vi-VN') + ' đ',
+                        totalLeft + summaryColWidth - 100, y,
+                        { width: 100, align: 'right' });
                 y += 20;
             }
 
-            if (discountAmount >= 0) {
-                doc.font('Helvetica-Bold');
-                doc.text('Giam gia:', totalLeft, y, { width: summaryColWidth - 100, align: 'left' });
-                doc.font('Helvetica');
-                doc.text(discountAmount.toLocaleString('vi-VN') + ' d', totalLeft + summaryColWidth - 100, y, { width: 100, align: 'right' });
+            if (discountAmount > 0) {
+                doc.font('Roboto-Bold')
+                    .text('Giảm giá:', totalLeft, y, { width: summaryColWidth - 100, align: 'left' });
+                doc.font('Roboto')
+                    .text(discountAmount.toLocaleString('vi-VN') + ' đ',
+                        totalLeft + summaryColWidth - 100, y,
+                        { width: 100, align: 'right' });
                 y += 20;
             }
 
-            // Vẽ đường kẻ ngăn cách trước tổng cộng
+            // Vẽ đường kẻ trước tổng cộng
             doc.moveTo(totalLeft, y)
                 .lineTo(totalLeft + summaryColWidth, y)
                 .stroke();
             y += 10;
 
-            doc.font('Helvetica-Bold');
-            doc.text('Tong cong:', totalLeft, y, { width: summaryColWidth - 100, align: 'left' });
-            doc.text(finalPrice.toLocaleString('vi-VN') + ' d', totalLeft + summaryColWidth - 100, y, { width: 100, align: 'right' });
+            // Tổng cộng
+            doc.font('Roboto-Bold')
+                .text('Tổng cộng:', totalLeft, y, { width: summaryColWidth - 100, align: 'left' })
+                .text(finalPrice.toLocaleString('vi-VN') + ' đ',
+                    totalLeft + summaryColWidth - 100, y,
+                    { width: 100, align: 'right' });
             y += 30;
 
             // Phương thức thanh toán
-            let paymentMethodText = 'Khong xac dinh';
-            switch (invoice.payment_method) {
-                case 'cash_on_delivery':
-                    paymentMethodText = 'Thanh toan khi nhan hang';
-                    break;
-                case 'bank_transfer':
-                    paymentMethodText = 'Chuyen khoan ngan hang';
-                    break;
-                case 'credit_card':
-                    paymentMethodText = 'The tin dung';
-                    break;
-                case 'momo':
-                    paymentMethodText = 'Vi dien tu MoMo';
-                    break;
-                case 'payos':
-                    paymentMethodText = 'PayOS';
-                    break;
-            }
+            const paymentMethods = {
+                cash_on_delivery: 'Thanh toán khi nhận hàng',
+                bank_transfer: 'Chuyển khoản ngân hàng',
+                credit_card: 'Thẻ tín dụng',
+                momo: 'Ví điện tử MoMo',
+                payos: 'PayOS'
+            };
 
-            doc.font('Helvetica');
-            doc.text(`Phuong thuc thanh toan: ${paymentMethodText}`, tableLeft, y);
+            doc.font('Roboto')
+                .text(`Phương thức thanh toán: ${paymentMethods[invoice.payment_method] || 'Không xác định'}`,
+                    tableLeft, y);
             y += 20;
 
             // Ghi chú
             if (invoice.notes) {
-                doc.text(`Ghi chu: ${removeVietnameseAccents(invoice.notes)}`, tableLeft, y);
+                doc.text(`Ghi chú: ${invoice.notes}`, tableLeft, y);
                 y += 20;
             }
 
@@ -663,17 +675,17 @@ const InvoiceService = {
             y = Math.max(y, 600);
             doc.fontSize(12);
 
-            // Vị trí chữ ký
             const signatureLeft = tableLeft;
             const signatureRight = doc.page.width - 180;
 
-            doc.font('Helvetica-Bold');
-            doc.text('Nguoi mua hang', signatureLeft, y, { width: 150, align: 'center' });
-            doc.text('Nguoi ban hang', signatureRight, y, { width: 150, align: 'center' });
+            doc.font('Roboto-Bold')
+                .text('Người mua hàng', signatureLeft, y, { width: 150, align: 'center' })
+                .text('Người bán hàng', signatureRight, y, { width: 150, align: 'center' });
             doc.moveDown();
-            doc.font('Helvetica');
-            doc.text('(Ky, ghi ro ho ten)', signatureLeft, y + 20, { width: 150, align: 'center' });
-            doc.text('(Ky, dong dau, ghi ro ho ten)', signatureRight, y + 20, { width: 150, align: 'center' });
+
+            doc.font('Roboto')
+                .text('(Ký, ghi rõ họ tên)', signatureLeft, y + 20, { width: 150, align: 'center' })
+                .text('(Ký, đóng dấu, ghi rõ họ tên)', signatureRight, y + 20, { width: 150, align: 'center' });
 
             // Kết thúc tạo PDF
             doc.end();
@@ -687,6 +699,7 @@ const InvoiceService = {
             throw error;
         }
     }
+
 
 
 };

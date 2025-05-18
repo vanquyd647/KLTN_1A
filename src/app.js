@@ -41,6 +41,7 @@ const couponRoutes = require('./routes/couponRoutes');
 const revenueRoutes = require('./routes/revenueRoute');
 const invoiceRoutes = require('./routes/invoiceRoutes');
 const categoryRoutes = require('./routes/categoryRoute');
+const statisticsRoutes = require('./routes/statisticsRoute');
 
 const { createRevenueTrigger, checkTrigger } = require('./db/triggers');
 const client = require('prom-client');
@@ -233,6 +234,7 @@ app.use('/v1/api/coupons', couponRoutes);
 app.use('/v1/api/revenue', revenueRoutes);
 app.use('/v1/api/invoices', invoiceRoutes);
 app.use('/v1/api/categories', categoryRoutes);
+app.use('/v1/api/statistics', statisticsRoutes);
 
 
 // Schedule Cron job: Update is_new status mỗi ngày lúc 2:00 AM
