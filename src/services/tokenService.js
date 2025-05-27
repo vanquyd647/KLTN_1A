@@ -1,9 +1,9 @@
 "use strict";
 
 const jwt = require("jsonwebtoken");
-const { Token } = require("../models"); // Import model từ Sequelize
+const { Token } = require("../models"); 
 const logger = require('../configs/winston');
-require("dotenv").config(); // Đọc biến môi trường từ .env
+require("dotenv").config(); 
 
 const tokenService = {
     /**
